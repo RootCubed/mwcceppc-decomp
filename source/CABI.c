@@ -16,21 +16,15 @@ static Object *CABI_FindZeroVirtualBaseMember(TypeClass *tclass, Object *obj) {
     NameSpaceObjectList *nsol;
     ClassList *base;
     Object *chk;
-    OverrideKind ok;
 
     for (nsol = CScope_FindName(tclass->nspace, obj->name); nsol; nsol = nsol->next) {
-        if (nsol->object->otype != OT_OBJECT) {
-            continue;
-        }
-
         chk = OBJECT(nsol->object);
         if (
-            chk->datatype == DVFUNC
+            chk->otype == OT_OBJECT &&
+            chk->datatype == DVFUNC &&
+            CClass_GetOverrideKind(chk, obj, 0) == OVERRIDE_VIRTUAL
         ) {
-            ok = CClass_GetOverrideKind(chk, obj, 0);
-            if (ok == OVERRIDE_VIRTUAL) {
-                return chk;
-            }
+            return chk;
         }
     }
 

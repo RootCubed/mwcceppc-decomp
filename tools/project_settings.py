@@ -51,6 +51,7 @@ CC = Path(CODEWARRIOR, 'mwcc.exe')
 LD = Path(CODEWARRIOR, 'mwld.exe')
 
 # Tools and scripts
+CW_WRAPPER = Path(TOOLDIR, 'mwcceppc_wrapper.py')
 SLICE_EXE = Path(TOOLDIR, 'slice_exe.py')
 GEN_OBJDIFF = Path(TOOLDIR, 'generate_objdiff.py')
 

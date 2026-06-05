@@ -96,8 +96,8 @@ writer = NinjaWriter()
 writer.variable('builddir', BUILDDIR)
 writer.newline()
 writer.variable('python', f'"{sys.executable}"')
-writer.variable('cc', CC)
-writer.variable('ld', LD)
+writer.variable('cc', f'$python {CW_WRAPPER} "{CC}"' if sys.platform != 'win32' else CC)
+writer.variable('ld', f'{WINDOWS_WRAPPER} "{LD}"' if sys.platform != 'win32' else LD)
 writer.newline()
 
 # Ninja build rules

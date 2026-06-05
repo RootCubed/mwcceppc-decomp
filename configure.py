@@ -77,7 +77,7 @@ def gen_exe_build_statements(writer: NinjaWriter, slice_file: SliceFile):
 
     # Objdiff
     writer.build('gen_objdiff',
-                    get_build_path(slice_file, '.objdiff'),
+                    'objdiff.json',
                     files_with_suffix(sliced_o_files(slice_file), '.o'),
                     implicit_inputs=files_with_suffix(sliced_o_files(slice_file), '.o'))
 
@@ -85,9 +85,7 @@ def gen_exe_build_statements(writer: NinjaWriter, slice_file: SliceFile):
     writer.build('link',
                     get_build_path(slice_file, '.exe'),
                     ld_o_files(slice_file),
-                    lcf=get_build_path(slice_file, '.lcf'),
-                    ldflags='',
-                    implicit_inputs=get_build_path(slice_file, '.lcf'))
+                    ldflags='')
 
 ######################
 # Build Script Setup #
@@ -141,7 +139,7 @@ writer.build('configure',
              slice.path)
 
 # Default targets (final EXE)
-writer.default(BUILDDIR / slice.meta.fileName)
+writer.default([BUILDDIR / slice.meta.fileName, 'objdiff.json'])
 
 # Flush the created file
 writer.flush(NINJA_BUILD_FILE)

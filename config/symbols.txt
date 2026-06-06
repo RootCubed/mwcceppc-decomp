@@ -1,4 +1,6 @@
 _getenv=0x403730
+_CABI_VTRelated=0x56e480
+_CABI_AllocateVTable=0x56e6b0
 _CABI_FindZeroVirtualBaseMember=0x56e7f0
 @200=0x69bdf3
 @201=0x69be07

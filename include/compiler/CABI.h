@@ -10,13 +10,20 @@ typedef enum CABIDestroyMode {
     CABIDestroy3 = 3
 } CABIDestroyMode;
 
+typedef struct VTableHeaderInfo {
+    SInt32 size;
+    UInt32 m_04;
+    UInt32 m_08;
+} VTableHeaderInfo;
+
 extern short CABI_GetStructResultArgumentIndex(TypeFunc *tfunc);
 extern Type *CABI_GetSizeTType(void);
 extern Type *CABI_GetPtrDiffTType(void);
-extern SInt16 CABI_StructSizeAlignValue(Type *type, SInt32 size);
+extern SInt16 CABI_StructSizeAlignValue(Type *type, UInt32 qual, SInt32 size);
 extern void CABI_ReverseBitField(TypeBitfield *tbitfield);
 extern void CABI_AddVTable(TypeClass *tclass);
 extern SInt32 CABI_GetVTableOffset(TypeClass *tclass);
+extern void CABI_GetVTableHeaderInfo(VTableHeaderInfo *info);
 extern void CABI_LayoutClass(ClassLayout *layout, TypeClass *tclass);
 extern void CABI_MakeDefaultArgConstructor(TypeClass *tclass, Object *func);
 extern ENode *CABI_MakeThisExpr(TypeClass *tclass, SInt32 offset);
@@ -34,8 +41,10 @@ extern Object *CABI_GetDestructorObject(Object *obj, CABIDestroyMode mode);
 extern void CABI_AddLayeredDestructors(TypeClass *tclass);
 extern ENode *CABI_DestroyObject(Object *dtor, ENode *objexpr, CABIDestroyMode mode, Boolean flag1, Boolean flag2);
 extern SInt32 CABI_ComputeNewArrayPadding(void);
-extern ENode *CABI_ReleaseGuardVariable(ENode *expr);
-extern ENode *CABI_AcquireGuardVariable(ENode *expr);
+extern ENode *CABI_ReleaseGuardVariable(Object *obj);
+extern ENode *CABI_AcquireGuardVariable(Object *obj);
 extern Object *CABI_NewGuardVariable(Object *expr);
+extern Boolean CABI_PassedByReference(TypeClass *type);
+extern ENode *CABI_AddPointerOffset(ENode *base, SInt32 offset);
 
 #endif

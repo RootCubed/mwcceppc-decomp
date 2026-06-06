@@ -7,6 +7,8 @@ typedef enum TypeType {
     TYPEVOID = 0,
     TYPEINT,
     TYPEFLOAT,
+    TYPE_3, // From GC 3.0 onwards
+    TYPE_4, // From Wii 1.1 onwards
     TYPEENUM,
     TYPESTRUCT,
     TYPECLASS,
@@ -158,9 +160,9 @@ struct TypeClass {
     ObjMemberVar *ivars;
     // ClassFriend *friends;
     VTable *vtable;
-    SOMInfo *sominfo;
+    // SOMInfo *sominfo;
     ObjCInfo *objcinfo;
-    UInt16 flags;
+    UInt32 flags;
     SInt8 mode;
     SInt8 action;
     SInt16 align;

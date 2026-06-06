@@ -1,8 +1,14 @@
 #include <common.h>
+#include <compiler/CABI.h>
 #include <compiler/CompilerTools.h>
 #include <compiler/CClass.h>
 #include <compiler/CError.h>
+#include <compiler/CExpr.h>
+#include <compiler/CInit.h>
+#include <compiler/CMachine.h>
+#include <compiler/CMangler.h>
 #include <compiler/CScope.h>
+#include <compiler/CParser.h>
 #include <compiler/objects.h>
 #include <compiler/scopes.h>
 #include <compiler/types.h>
@@ -38,6 +44,41 @@ static Object *CABI_FindZeroVirtualBaseMember(TypeClass *tclass, Object *obj) {
     }
 
     return NULL;
+}
+
+SInt32 CABI_GetVTableOffset(TypeClass *tclass) {
+    return 0;
+}
+
+SInt32 CABI_ComputeNewArrayPadding(void) {
+    return 0x10;
+}
+
+ENode *CABI_ReleaseGuardVariable(ENode *expr) {
+    ENode *ref = checkreference(CExpr_New_EINDIRECT_Node(expr));
+    return makediadicnode(ref, intconstnode(TYPE(&stsignedchar), 1), EASS);
+}
+
+ENode *CABI_AcquireGuardVariable(ENode *expr) {
+    return checkreference(CExpr_New_EINDIRECT_Node(expr));
+}
+
+Object *CABI_NewGuardVariable(Object *expr) {
+    Object *obj;
+
+    if (expr == NULL) {
+        #line 372
+        CError_FATAL();
+    }
+    obj = CParser_NewCompilerDefDataObject();
+    obj->type = TYPE(&stsignedchar);
+    obj->name = CParser_GetUniqueName();
+    obj->sclass = expr->sclass;
+    obj->qual |= expr->qual & 0x60000;
+    CParser_UpdateObject(obj, NULL);
+    CMangler_SetupGuardVarName(obj, expr);
+    CInit_DeclareData(obj, NULL, NULL, obj->type->size);
+    return obj;
 }
 
 void CABI_ReverseBitField(TypeBitfield *tbitfield) {

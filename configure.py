@@ -109,7 +109,7 @@ writer.rule('cw',
             description='Compile $in')
 
 writer.rule('slice_exe',
-            command=f'$python {SLICE_EXE} $in -s $symbols -o $out_dir',
+            command=f'$python {FORMAT_SYMBOLS} $symbols && $python {SLICE_EXE} $in -s $symbols -o $out_dir',
             description='Slice $in')
 
 writer.rule('link',

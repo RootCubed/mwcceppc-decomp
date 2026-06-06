@@ -6,11 +6,9 @@
 import sys
 from pathlib import Path
 
-sys.path.append('tools')
-
-from project_settings import *
-from slicelib import *
-from utils.ninja_syntax_ex import Writer as NinjaWriter
+from tools.project_settings import *
+from tools.slicelib import *
+from tools.utils.ninja_syntax_ex import Writer as NinjaWriter
 
 ####################
 # Helper Functions #

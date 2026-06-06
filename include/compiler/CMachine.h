@@ -59,7 +59,7 @@ extern void CMach_PragmaParams(void);
 extern void CMach_AdjustFuntionArgs(/* unknown args */);
 extern SInt16 CMach_GetStructAlign(TypeStruct *tstruct);
 extern SInt16 CMach_GetClassAlign(TypeClass *tclass);
-extern SInt16 CMach_GetTypeAlign(Type *type);
+extern SInt16 CMach_GetTypeAlign(Type *type, UInt32 qual);
 extern SInt16 CMach_MemberAlignValue(Type *type, SInt32 var);
 extern void CMach_StructLayoutInitOffset(SInt32 offset);
 extern SInt32 CMach_StructLayoutGetCurSize(void);
@@ -72,5 +72,6 @@ extern Boolean CMach_FloatIsPowerOf2(Float flt);
 extern Float CMach_FloatReciprocal(Float flt);
 extern SInt32 CMach_RoundedSizeOf(Object *object);
 extern void CMach_ReInitRuntimeObjects(void);
+extern Boolean CMach_PassAddressOf(TypeClass *type);
 
 #endif

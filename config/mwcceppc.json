@@ -2,7 +2,7 @@
     "meta": {
         "fileName": "mwcceppc.exe",
         "type": "EXE",
-        "defaultCompilerFlags": "-O4 -align 2 -enum min -inline auto -wchar_t on -bool off -Cpp_exceptions off",
+        "defaultCompilerFlags": "-O4 -align 2 -inline deferred -enum min -inline auto -wchar_t on -bool off -Cpp_exceptions off",
         "moduleNum": 0,
         "baseAddr": "00400000",
         "sections": {

@@ -73,6 +73,7 @@ struct ObjMemberVar {
     Boolean has_path;
     struct ObjMemberVar *next;
     HashNameNode *name;
+    UInt32 m_0c; // From Wii 1.0 onwards
     Type *type;
     UInt32 qual;
     UInt32 offset;

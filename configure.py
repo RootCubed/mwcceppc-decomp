@@ -6,6 +6,8 @@
 import sys
 from pathlib import Path
 
+sys.path.append("tools")
+
 from tools.project_settings import *
 from tools.slicelib import *
 from tools.utils.ninja_syntax_ex import Writer as NinjaWriter
@@ -81,6 +83,7 @@ def mwcc_to_clang(flags: str) -> list[str]:
             "auto": "-finline-functions",
             "none": "-fno-inline-functions",
             "off": "-fno-inline-functions",
+            "deferred": "-finline-functions"
         },
         "-Cpp_exceptions": {
             "on": "-fcxx-exceptions",

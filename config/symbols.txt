@@ -8,3 +8,5 @@ _getenv=0x00403730
 @201=0x69be07
 @202=0x69be17
 _COMSTA_init=0x71ef3c
+_CABI_VTRelated=0x0056e480
+_CABI_AllocateVTable=0x0056e6b0

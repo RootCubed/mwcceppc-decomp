@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import cast
 
 from color_term import *
-from coff import COFF, COFFSection, COFFSymbol
+from coff import COFF, COFFSection, COFFSymbol, COFFRelocation
 from peconsts import ImageDirectoryType
 from pefile import PE, DebugDirectoryEntry
 from project_settings import *
@@ -60,6 +60,45 @@ def extract_slice(pe_file: PE, slice: Slice, syms: dict[str, int]) -> COFF:
                 sym.section_number = sec.sec_idx + 2
                 sym.storage_class = 2
                 coff_file.symbols.append(sym)
+
+        inverse_syms = {v: k for k, v in syms.items()}
+
+        for offset in range(0, len(sec_data) - 4):
+            ptr = int.from_bytes(
+                sec_data[offset : offset + 4], byteorder="little"
+            )
+
+            def add_relocation(ptr, absolute):
+                name = inverse_syms[ptr]
+                coff_symbol = COFFSymbol()
+                coff_symbol.name = name
+                coff_symbol.type = 0x20 if coff_sec.flags & 0x00000020 != 0 else 0x0 # 0x00000020 = IMAGE_SCN_CNT_CODE
+                coff_symbol.storage_class = 0x2
+                
+                if not coff_symbol in coff_file.symbols:
+                    coff_file.symbols.append(coff_symbol)
+                symbol_idx = coff_file.symbols.index(coff_symbol)
+
+                coff_relocation = COFFRelocation()
+                coff_relocation.address = offset
+                coff_relocation.sym_index = symbol_idx
+                coff_relocation.type = 0x0006 if absolute else 0x0014
+                coff_sec.relocations.append(coff_relocation)
+
+                coff_sec.data[offset : offset + 4] = bytes(0x4)
+
+            if ptr in inverse_syms:
+                add_relocation(ptr, True)
+
+            displacement = int.from_bytes(
+                coff_sec.data[offset : offset + 4], byteorder="little", signed=True
+            )
+
+            relative_ptr = offset + sec.start_offs + pe_sec.virt_addr + 0x400000 + 4 + displacement
+
+            if relative_ptr in inverse_syms:
+                add_relocation(relative_ptr, False)
+
     return coff_file
 
 

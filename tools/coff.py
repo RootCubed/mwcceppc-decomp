@@ -70,6 +70,10 @@ class COFFSymbol:
 class COFFRelocation:
     relocation_struct = struct.Struct('<IIH')
 
+    address: int
+    sym_index: int
+    type: int
+
     pass
 
 class COFFSection:
@@ -78,6 +82,7 @@ class COFFSection:
     def __init__(self) -> None:
         self.sec_name: str = ''
         self.data: bytearray = bytearray()
+        self.size: int | None = None
         self.flags: int = 0
         self.relocations: list[COFFRelocation] = []
 
@@ -133,7 +138,7 @@ class COFF:
         pos = self.file_header.size + len(self.sections) * self.section_header.size
         for sec in self.sections:
             sec_offsets.append(pos)
-            sec_lengths.append(len(sec.data))
+            sec_lengths.append(sec.size or len(sec.data))
             pos += len(sec.data)
             reloc_offsets.append(pos)
             reloc_counts.append(len(sec.relocations))
@@ -162,6 +167,12 @@ class COFF:
         for i, sec in enumerate(self.sections):
             file.seek(sec_offsets[i])
             file.write(sec.data)
+
+        for i, sec in enumerate(self.sections):
+            file.seek(reloc_offsets[i])
+            for relocation in sec.relocations:
+                reloc_data = relocation.relocation_struct.pack(relocation.address, relocation.sym_index, relocation.type)
+                file.write(reloc_data)
 
         file.seek(sym_sec_offset)
         file.write(sym_sec_data)

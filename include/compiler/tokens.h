@@ -3,6 +3,9 @@
 
 #include <compiler/common.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
 
 typedef enum EToken {
     TK_INTCONST = -1,
@@ -182,6 +185,10 @@ struct TokenStream {
     SInt32 tokens;
     TStreamElement *firsttoken;
 };
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif
 

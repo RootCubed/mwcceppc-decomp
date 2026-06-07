@@ -8,9 +8,9 @@ from pathlib import Path
 
 sys.path.append('tools')
 
-from project_settings import *
-from slicelib import *
-from utils.ninja_syntax_ex import Writer as NinjaWriter
+from tools.project_settings import *
+from tools.slicelib import *
+from tools.utils.ninja_syntax_ex import Writer as NinjaWriter
 
 ####################
 # Helper Functions #
@@ -40,6 +40,86 @@ def sliced_o_files(slice_file: SliceFile) -> list[Path]:
 
 def files_with_suffix(files: list[Path], suffix: str) -> list[Path]:
     return [f.with_suffix(suffix) for f in files]
+
+def gen_compile_commands(slice_file: SliceFile):
+    commands = []
+    directory = Path.cwd()
+    for slice in slice_file.parsed_slices:
+        if not slice.source:
+            continue
+
+        inc_dir_args = [f'-I{i}' for i in INCDIRS]
+        output = (BUILDDIR_COMPILED / slice_file.unit_name() / slice.source).with_suffix('.o')
+        flags = slice_file.meta.defaultCompilerFlags if slice.ccFlags == '' else slice.ccFlags
+        file = slice.source
+        flags = mwcc_to_clang(flags)
+        arguments = [
+            '/usr/bin/clang', '-c', str(file), '-o', str(output),
+            '-D__INTEL__', '-Dwchar_t=unsigned int', '-D__option=',
+            '-Wno-ignored-attributes', '-Wno-pragma-pack', '-fdeclspec',
+            *flags, *inc_dir_args
+        ]
+
+        command = {
+            'directory': str(directory),
+            'file': str(file),
+            'output': str(output),
+            'arguments': arguments,
+        }
+        commands.append(command)
+
+    Path('compile_commands.json').write_text(json.dumps(commands, indent=2))
+
+def mwcc_to_clang(flags: str) -> list[str]:
+    PASSTHROUGH = ['-O4', '-O3', '-O2', '-O1', '-O0']
+    ONE_ARG = {
+    }
+    TWO_ARG_LAMBDA = {
+        '-align': lambda x : f'-fpack-struct={x}',
+    }
+    TWO_ARG_DICT = {
+        '-enum': {
+            'min': '-fshort-enums',
+            'int': '-fno-short-enums'
+        },
+        '-inline': {
+            'auto': '-finline-functions',
+            'none': '-fno-inline-functions',
+            'off': '-fno-inline-functions',
+            'deferred': '-finline-functions'
+        },
+        '-Cpp_exceptions': {
+            'on': '-fcxx-exceptions',
+            'off': '-fno-cxx-exceptions',
+        }
+    }
+
+    out = []
+    flags_split = flags.split()
+    i = 0
+    while True:
+        if i >= len(flags_split):
+            break
+
+        flag = flags_split[i]
+        if flag in PASSTHROUGH:
+            out.append(flag)
+            i += 1
+            continue
+
+        if flag in TWO_ARG_LAMBDA:
+            out.append(TWO_ARG_LAMBDA[flag](flags_split[i + 1]))
+            i += 2
+            continue
+
+        if flag in TWO_ARG_DICT:
+            out.append(TWO_ARG_DICT[flag][flags_split[i + 1]])
+            i += 2
+            continue
+
+        i += 1
+
+    return out
 
 ##############################
 # Step 1: Source Compilation #
@@ -128,6 +208,9 @@ writer.rule('configure',
 
 # Load slice files and ensure correct slice order
 slice: SliceFile = load_slice_file(SLICE_FILE)
+
+# Generate compile_commands.json
+gen_compile_commands(slice)
 
 # Generate build statements
 gen_compile_build_statements(writer, slice)

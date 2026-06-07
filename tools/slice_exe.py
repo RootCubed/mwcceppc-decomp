@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import cast
 
 from color_term import *
-from coff import COFF, COFFSection, COFFSymbol
+from coff import COFF, COFFSection, COFFSymbol, COFFRelocation
+from format_symbols import format_symbols
 from peconsts import ImageDirectoryType
 from pefile import PE, DebugDirectoryEntry
 from project_settings import *
@@ -22,19 +23,22 @@ def extract_slice(pe_file: PE, slice: Slice, syms: dict[str, int]) -> COFF:
     drectve_sec.data = bytearray(linker_flags.encode())
     coff_file.sections.append(drectve_sec)
 
+    actual_sec_idx = 2
+
     for sec in slice.sliceSecs:
         pe_sec = pe_file.sections[sec.sec_idx]
         sec_data = pe_sec.data[sec.start_offs:sec.end_offs]
         coff_sec = COFFSection()
         coff_sec.sec_name = sec.sec_name
         coff_sec.data = bytearray(sec_data)
+        coff_sec.size = sec.end_offs - sec.start_offs
         coff_sec.flags = pe_sec.flags
         coff_file.sections.append(coff_sec)
 
         sym = COFFSymbol()
         sym.name = sec.sec_name
         sym.value = 0
-        sym.section_number = sec.sec_idx + 1
+        sym.section_number = actual_sec_idx
         sym.storage_class = 3
         coff_file.symbols.append(sym)
 
@@ -46,7 +50,7 @@ def extract_slice(pe_file: PE, slice: Slice, syms: dict[str, int]) -> COFF:
                     sym.name = name
                     sym.value = sym_addr - sec.start_offs
                     sym.type = 0x20
-                    sym.section_number = sec.sec_idx + 2
+                    sym.section_number = actual_sec_idx
                     sym.storage_class = 2
                     coff_file.symbols.append(sym)
 
@@ -56,25 +60,58 @@ def extract_slice(pe_file: PE, slice: Slice, syms: dict[str, int]) -> COFF:
                 sym = COFFSymbol()
                 sym.name = name
                 sym.value = addr - 0x400000 - pe_sec.virt_addr - sec.start_offs
-                sym.type = 0x20
-                sym.section_number = sec.sec_idx + 2
+                sym.type = 0x20 if coff_sec.flags & 0x00000020 != 0 else 0x0 # 0x00000020 = IMAGE_SCN_CNT_CODE
+                sym.section_number = actual_sec_idx
                 sym.storage_class = 2
                 coff_file.symbols.append(sym)
+
+        inverse_syms = {v: k for k, v in syms.items()}
+
+        for offset in range(0, len(sec_data) - 4):
+            ptr = int.from_bytes(
+                sec_data[offset : offset + 4], byteorder='little'
+            )
+
+            def add_relocation(ptr, absolute):
+                name = inverse_syms[ptr]
+                coff_symbol = COFFSymbol()
+                coff_symbol.name = name
+                coff_symbol.type = 0x20 if coff_sec.flags & 0x00000020 != 0 else 0x0 # 0x00000020 = IMAGE_SCN_CNT_CODE
+                coff_symbol.storage_class = 0x2
+
+                if not coff_symbol in coff_file.symbols:
+                    coff_file.symbols.append(coff_symbol)
+                symbol_idx = coff_file.symbols.index(coff_symbol)
+
+                coff_relocation = COFFRelocation()
+                coff_relocation.address = offset
+                coff_relocation.sym_index = symbol_idx
+                coff_relocation.type = 0x0006 if absolute else 0x0014
+                coff_sec.relocations.append(coff_relocation)
+
+                coff_sec.data[offset : offset + 4] = bytes(0x4)
+
+            if ptr in inverse_syms:
+                add_relocation(ptr, True)
+
+            displacement = int.from_bytes(
+                coff_sec.data[offset : offset + 4], byteorder='little', signed=True
+            )
+
+            relative_ptr = offset + sec.start_offs + pe_sec.virt_addr + 0x400000 + 4 + displacement
+
+            if relative_ptr in inverse_syms:
+                add_relocation(relative_ptr, False)
+
+        actual_sec_idx += 1
+
     return coff_file
 
 
 def slice_exe(exe_file: Path, out_path: Path, symbol_file: Path) -> None:
     assert exe_file.is_file()
 
-    # TODO: use an actual symbol map file
-    syms: dict[str, int] = {}
-
-    for line in symbol_file.read_text().splitlines():
-        if line.strip():
-            sym, addr = line.split('=')
-            if sym in syms:
-                print_warn('Warning: symbol', sym, 'defined multiple times in', symbol_file.name, end='!\n')
-            syms[sym.strip()] = int(addr, 16)
+    syms = format_symbols(symbol_file)
 
     # Read slices
     with open(exe_file, 'rb') as f:

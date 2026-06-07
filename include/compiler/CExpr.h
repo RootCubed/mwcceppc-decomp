@@ -6,6 +6,10 @@
 #include <compiler/types.h>
 #include <compiler/CScope.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 typedef struct ConIteratorList {
     struct ConIteratorList *next;
     struct ConIterator *iter;
@@ -202,5 +206,9 @@ extern ENode *CExpr_AssignmentPromotion(ENode *expr, Type *type2, UInt32 qual2, 
 extern void CExpr_FuncArgMatch(NameSpaceObjectList *list, TemplArg *templargs, ENodeList *argexprs, Match13 *match13, ENode *expr, Boolean flag);
 extern Boolean CExpr_CondOperatorMatch(ENode *left, ENode *right, Conversion *conv);
 extern Boolean CExpr_OperatorMatch(short token, ENode *left, ENode *right, Conversion *conv);
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

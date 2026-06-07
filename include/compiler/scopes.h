@@ -3,6 +3,9 @@
 
 #include <compiler/common.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
 
 struct NameSpace {
     NameSpace *parent;
@@ -43,5 +46,8 @@ struct NameSpaceLookupList { // assumed name
     NameSpaceList *namespaces;
 };
 
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

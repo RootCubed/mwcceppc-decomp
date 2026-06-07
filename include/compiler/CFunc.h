@@ -4,6 +4,10 @@
 #include <compiler/common.h>
 #include <compiler/CScope.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 typedef struct DeclBlock {
     struct DeclBlock *next;
     ExceptionAction *dobjstack; // is type right?
@@ -155,5 +159,9 @@ extern void InitExpr_Register(ENode *expr, Object *object);
 extern void CFunc_GenerateDummyFunction(Object *func);
 extern void CFunc_GenerateSingleExprFunc(Object *func, ENode *expr);
 extern void CFunc_GenerateDummyCtorFunc(Object *func, Object *real_ctor);
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

@@ -5,6 +5,10 @@
 
 enum { CR = 13, LF = 10 };
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 typedef struct HashNameNode {
     struct HashNameNode *next;
     SInt32 id;
@@ -329,5 +333,9 @@ struct CompilerLinkerParamBlk {
 #define LOW_PART_BUGGY(value) ( (short) (value) )
 #endif
 
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

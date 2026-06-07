@@ -6,6 +6,10 @@
 #include <compiler/tokens.h>
 #include <compiler/types.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 enum {
     AlignMode0_Mac68k,
     AlignMode1_Mac68k4byte,
@@ -403,5 +407,9 @@ extern void CParser_CallBackAction(Object *obj);
 extern Object *CParser_ParseObject(void);
 extern void CParser_ParseGlobalDeclaration(void);
 extern void cparser(void);
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

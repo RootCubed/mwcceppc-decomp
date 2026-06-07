@@ -1,9 +1,9 @@
 #include <common.h>
 
-char *MW_CYGDRIVE_PREFIX;
-char *MW_CYGWIN_ROOT;
-UInt8 old_cygwin_softlinks;
-Boolean COMSTA_init;
+static char *MW_CYGDRIVE_PREFIX;
+static char *MW_CYGWIN_ROOT;
+static UInt8 old_cygwin_softlinks;
+static Boolean COMSTA_init;
 
 __declspec(dllimport) int __stdcall CoInitialize(void *);
 

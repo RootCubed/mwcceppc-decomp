@@ -1,3 +1,12 @@
+_getenv=0x403730
+_CABI_VTRelated=0x56e480
+_CABI_AllocateVTable=0x56e6b0
 _CABI_FindZeroVirtualBaseMember=0x56e7f0
-_CABI_VTRelated=0x0056e480
-_CABI_AllocateVTable=0x0056e6b0
+@204=0x69bdf3
+@205=0x69be07
+@206=0x69be17
+__imp__CoInitialize@4=0x71d400
+_COMSTA_init=0x71ef3c
+_old_cygwin_softlinks=0x71ef3d
+_MW_CYGWIN_ROOT=0x71ef40
+_MW_CYGDRIVE_PREFIX=0x71ef44

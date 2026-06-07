@@ -3,6 +3,10 @@
 
 #include <compiler/common.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 typedef enum ENodeType {
     EPOSTINC,
     EPOSTDEC,
@@ -336,5 +340,9 @@ enum {
         case EBCLR: \
         case EBTST: \
         case EBSET
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

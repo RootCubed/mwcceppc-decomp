@@ -1,7 +1,11 @@
 #ifndef COMPILER_CSCOPE_H
 #define COMPILER_CSCOPE_H
 
-#include "compiler/common.h"
+#include <compiler/common.h>
+
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
 
 extern Boolean cscope_is_member_func;
 extern Object *cscope_currentfunc;
@@ -95,5 +99,9 @@ extern void CScope_AddClassUsingDeclaration(TypeClass *tclass, TypeClass *tclass
 extern void CScope_ParseUsingDeclaration(NameSpace *nspace, AccessType access, Boolean flag);
 extern void CScope_ParseNameSpaceAlias(HashNameNode *name);
 extern void CScope_ParseUsingDirective(NameSpace *nspace);
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

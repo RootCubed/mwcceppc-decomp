@@ -3,6 +3,10 @@
 
 #include <compiler/common.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 typedef void (*ExprCB)(Type *type, ENode *expr, Boolean flag);
 typedef void (*InitExprRegisterCB)(ENode *expr);
 typedef void (*InsertExprCB)(ENode *expr);
@@ -64,5 +68,9 @@ extern void CInit_DeclarePooledStrings(void);
 extern void CInit_DeclareData(Object *obj, void *data, OLinkList *list, SInt32 size);
 extern void CInit_DeclareReadOnlyData(Object *obj, void *data, OLinkList *list, SInt32 size);
 extern void CInit_DefineTentativeData(void);
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

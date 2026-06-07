@@ -3,6 +3,10 @@
 
 #include <compiler/common.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 typedef enum TypeType {
     TYPEVOID = 0,
     TYPEINT,
@@ -411,5 +415,9 @@ struct TypeList {
 
 #define OBJ_GET_TARGET_VOLATILE(obj) ( IS_TYPE_POINTER((obj)->type) ? (TYPE_POINTER((obj)->type)->qual & Q_VOLATILE) : ((obj)->qual & Q_VOLATILE) )
 #define OBJ_GET_TARGET_CONST(obj) ( IS_TYPE_POINTER((obj)->type) ? (TYPE_POINTER((obj)->type)->qual & Q_CONST) : ((obj)->qual & Q_CONST) )
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

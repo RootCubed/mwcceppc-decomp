@@ -4,6 +4,10 @@
 #include <compiler/common.h>
 #include <compiler/tokens.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 
 typedef enum ObjectType {
     OT_ENUMCONST,
@@ -239,5 +243,8 @@ CW_INLINE Boolean Inline_IsObjectData(Object *object) {
     return object->datatype == DDATA;
 }
 
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

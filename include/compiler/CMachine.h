@@ -3,6 +3,10 @@
 
 #include <compiler/common.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 extern TypeIntegral stbool;
 extern TypeIntegral stchar;
 extern TypeIntegral stsignedchar;
@@ -73,5 +77,9 @@ extern Float CMach_FloatReciprocal(Float flt);
 extern SInt32 CMach_RoundedSizeOf(Object *object);
 extern void CMach_ReInitRuntimeObjects(void);
 extern Boolean CMach_PassAddressOf(TypeClass *type);
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

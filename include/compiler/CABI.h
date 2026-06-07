@@ -3,6 +3,10 @@
 
 #include <compiler/common.h>
 
+#ifdef __MWERKS__
+#pragma options align=mac68k
+#endif
+
 typedef enum CABIDestroyMode {
     CABIDestroy0 = 0,
     CABIDestroy1 = 1,
@@ -46,5 +50,9 @@ extern ENode *CABI_AcquireGuardVariable(Object *obj);
 extern Object *CABI_NewGuardVariable(Object *expr);
 extern Boolean CABI_PassedByReference(TypeClass *type);
 extern ENode *CABI_AddPointerOffset(ENode *base, SInt32 offset);
+
+#ifdef __MWERKS__
+#pragma options align=reset
+#endif
 
 #endif

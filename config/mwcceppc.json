@@ -2,7 +2,7 @@
     "meta": {
         "fileName": "mwcceppc.exe",
         "type": "EXE",
-        "defaultCompilerFlags": "-O4 -align 2 -inline deferred -enum min -inline auto -wchar_t on -bool off -Cpp_exceptions off",
+        "defaultCompilerFlags": "-O4 -inline deferred -enum min -inline auto -wchar_t on -bool off -Cpp_exceptions off -str noreadonly -nostdinc",
         "moduleNum": 0,
         "baseAddr": "00400000",
         "sections": {
@@ -22,8 +22,8 @@
             "nonMatching": true,
             "source": "OS.c",
             "memoryRanges": {
-                ".text": "0xe960-0xea10",
-                ".data": "0x10df3-0x10e30",
+                ".text": "0xe960-0xea03",
+                ".data": "0x10df3-0x10e2f",
                 ".bss": "0xf3c-0xf48"
             }
         },

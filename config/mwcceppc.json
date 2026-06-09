@@ -31,7 +31,7 @@
             "nonMatching": true,
             "source": "CABI.c",
             "memoryRanges": {
-                ".text": "0x167a60-0x16dad0",
+                ".text": "0x167ad0-0x16dad0",
                 ".rdata": "0xc318-0xc338",
                 ".data": "0x42354-0x4235c"
             }

@@ -234,6 +234,8 @@ struct FuncArg { // ok
     UInt32 qual;
     SInt16 sclass;
     Boolean is_array;
+    UInt8 pad[2];
+    UInt32 m_1a;
 };
 
 struct TypeFunc {
@@ -243,6 +245,7 @@ struct TypeFunc {
     ExceptSpecList *exspecs;
     Type *functype;
     UInt32 qual;
+    UInt8 pad[0x4];
     UInt32 flags;
 };
 
@@ -283,9 +286,10 @@ struct TypeMemberFunc {
     ExceptSpecList *exspecs;
     Type *functype;
     UInt32 qual;
+    UInt8 pad[0x4];
     UInt32 flags;
+    UInt8 pad2[0x4];
     TypeClass *theclass;
-    UInt8 pad[0x8];
     SInt32 vtbl_index; // index of this method within the vtable
     SInt32 funcid; // ID used for tracking this method within browse data
     Boolean is_static; // is static

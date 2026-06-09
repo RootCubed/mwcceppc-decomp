@@ -9,11 +9,14 @@
 #include <compiler/CInit.h>
 #include <compiler/CMachine.h>
 #include <compiler/CMangler.h>
+#include <compiler/CMid.h>
 #include <compiler/CScope.h>
 #include <compiler/CParser.h>
 #include <compiler/objects.h>
 #include <compiler/scopes.h>
 #include <compiler/types.h>
+
+static OffsetList *trans_vtboffsets;
 
 short CABI_GetStructResultArgumentIndex(TypeFunc *tfunc) {
     return 0;
@@ -163,6 +166,56 @@ static void CABI_ApplyClassFlags(Object *obj, UInt8 flags) {
     }
 }
 
+static void CABI_AllocateVTable(ClassListList *clsList, ClassLayout *layout, TypeClass *tclass) {
+    ObjMemberVar *member;
+    TypeClass *cls;
+    int i;
+
+    if (!tclass->vtable) {
+        CABI_AddVTable(tclass);
+        layout->xA = layout->lex_order_count - 1;
+    }
+
+    if (clsList != NULL && clsList->m_0c) {
+        #line 1381
+        CError_ASSERT(clsList->base != NULL);
+        cls = clsList->base->base;
+    } else {
+        cls = NULL;
+    }
+
+    if (cls == NULL) {
+        member = galloc(sizeof(ObjMemberVar));
+        memclrw(member, sizeof(ObjMemberVar));
+
+        member->otype = OT_MEMBERVAR;
+        member->access = ACCESSPUBLIC;
+        member->name = vptr_name_node;
+        member->type = TYPE(&vtable_ptr);
+        layout->vtable_ivar = member;
+
+        for (i = layout->xA; ; i--) {
+            if (i < 0) {
+                member->next = tclass->ivars;
+                tclass->ivars = member;
+                break;
+            }
+
+            #line 1413
+            CError_ASSERT(layout->objlist[i]);
+
+            if (layout->objlist[i]->otype == OT_MEMBERVAR) {
+                member->next = OBJ_MEMBER_VAR(layout->objlist[i])->next;
+                OBJ_MEMBER_VAR(layout->objlist[i])->next = member;
+                break;
+            }
+        }
+    } else {
+        tclass->vtable->owner = cls->vtable->owner;
+        layout->vtable_ivar = NULL;
+    }
+}
+
 static void CABI_MakeVTableLayout(ClassListList *clsList, ClassLayout *layout, TypeClass *tclass) {
     TypeClass *cls;
     Object *obj;
@@ -244,56 +297,6 @@ static void CABI_MakeVTableLayout(ClassListList *clsList, ClassLayout *layout, T
     tclass->vtable->offset = vtsize;
 }
 
-static void CABI_AllocateVTable(ClassListList *clsList, ClassLayout *layout, TypeClass *tclass) {
-    ObjMemberVar *member;
-    TypeClass *cls;
-    int i;
-
-    if (!tclass->vtable) {
-        CABI_AddVTable(tclass);
-        layout->xA = layout->lex_order_count - 1;
-    }
-
-    if (clsList != NULL && clsList->m_0c) {
-        #line 1381
-        CError_ASSERT(clsList->base != NULL);
-        cls = clsList->base->base;
-    } else {
-        cls = NULL;
-    }
-
-    if (cls == NULL) {
-        member = galloc(sizeof(ObjMemberVar));
-        memclrw(member, sizeof(ObjMemberVar));
-
-        member->otype = OT_MEMBERVAR;
-        member->access = ACCESSPUBLIC;
-        member->name = vptr_name_node;
-        member->type = TYPE(&vtable_ptr);
-        layout->vtable_ivar = member;
-
-        for (i = layout->xA; ; i--) {
-            if (i < 0) {
-                member->next = tclass->ivars;
-                tclass->ivars = member;
-                break;
-            }
-
-            #line 1413
-            CError_ASSERT(layout->objlist[i]);
-
-            if (layout->objlist[i]->otype == OT_MEMBERVAR) {
-                member->next = OBJ_MEMBER_VAR(layout->objlist[i])->next;
-                OBJ_MEMBER_VAR(layout->objlist[i])->next = member;
-                break;
-            }
-        }
-    } else {
-        tclass->vtable->owner = cls->vtable->owner;
-        layout->vtable_ivar = NULL;
-    }
-}
-
 static Object *CABI_ThisArg(void) {
     #line 1534
     CError_ASSERT(arguments && IS_TYPE_POINTER_ONLY(arguments->object->type));
@@ -313,6 +316,106 @@ ENode *CABI_MakeThisExpr(TypeClass *tclass, SInt32 offset) {
     }
 
     return CABI_AddPointerOffset(expr, offset);
+}
+
+static Boolean CABI_FindOffset(SInt32 offset) {
+    OffsetList *offsetlist;
+    for (offsetlist = trans_vtboffsets; offsetlist; offsetlist = offsetlist->next) {
+        if (offsetlist->offset == offset && offsetlist->m_08 == 0) {
+            return 1;
+        }
+    }
+
+    offsetlist = lalloc(sizeof(OffsetList));
+    offsetlist->next = trans_vtboffsets;
+    offsetlist->offset = offset;
+    offsetlist->m_08 = 0;
+    trans_vtboffsets = offsetlist;
+    return 0;
+}
+
+static ENode *CABI_0056e210(ENode *node, TypeClass *cls1, TypeClass *cls2, TypeClass *cls3, SInt32 offset) {
+    ClassList *list;
+    Object *obj;
+    OffsetList *offsetlist;
+    SInt32 newOffset;
+    ENode *vtptr;
+
+    for (list = cls2->bases; list; list = list->next) {
+        if (list->base == cls3 && list->is_virtual) {
+            newOffset = offset + list->offset;
+
+            if (!CABI_FindOffset(newOffset)) {
+                vtptr = makemonadicnode(
+                    CABI_AddPointerOffset(CABI_AcquireGuardVariable(CABI_ThisArg()), newOffset),
+                    EINDIRECT
+                );
+                vtptr->rtype = TYPE(&void_ptr);
+
+                node = makediadicnode(
+                    vtptr,
+                    node,
+                    EASS
+                );
+            }
+        }
+
+        if (list->is_virtual) {
+            newOffset = CClass_FindVirtualBase(cls1, list->base)->offset;
+        } else {
+            newOffset = offset + list->offset;
+        }
+        node = CABI_0056e210(node, cls1, list->base, cls3, newOffset);
+    }
+    return node;
+}
+
+static OffsetList *CABI_GetVBasePath(TypeClass *tclass, TypeClass *baseclass) {
+    ClassList *base;
+    OffsetList *best;
+    OffsetList *list;
+    OffsetList *scan;
+    short bestLength;
+    short length;
+
+    for (base = tclass->bases; base; base = base->next) {
+        if (base->base == baseclass && base->is_virtual) {
+            best = lalloc(sizeof(OffsetList));
+            best->next = NULL;
+            best->offset = base->offset;
+            return best;
+        }
+    }
+
+    best = NULL;
+
+    for (base = tclass->bases; base; base = base->next) {
+        list = CABI_GetVBasePath(base->base, baseclass);
+        if (list) {
+            length = 1;
+            for (scan = list->next; scan; scan = scan->next) {
+                length++;
+            }
+
+            if (base->is_virtual) {
+                length++;
+            }
+
+            if (!best || length < bestLength) {
+                if (base->is_virtual) {
+                    best = lalloc(sizeof(OffsetList));
+                    best->next = list;
+                    best->offset = base->offset;
+                } else {
+                    best = list;
+                    best->offset += base->offset;
+                }
+                bestLength = length;
+            }
+        }
+    }
+
+    return best;
 }
 
 static SInt32 CABI_FindNVBase(TypeClass *tclass, TypeClass *baseclass, SInt32 offset) {
@@ -352,4 +455,152 @@ SInt32 CABI_GetCtorOffsetOffset(TypeClass *tclass, TypeClass *baseclass) {
     copts.structalignment = saveAlignMode;
 
     return size;
+}
+
+static Boolean CABI_IsOperatorNew(Object *obj) {
+    return
+        obj->otype == OT_OBJECT &&
+        IS_TYPE_FUNC(obj->type) &&
+        TYPE_FUNC(obj->type)->args &&
+        TYPE_FUNC(obj->type)->args->type == CABI_GetSizeTType() &&
+        !TYPE_FUNC(obj->type)->args->next;
+}
+
+Object *CABI_ConstructorCallsNew(TypeClass *tclass) {
+    NameSpaceObjectList *nsol;
+    NameResult pr;
+
+    if (!(tclass->flags & CLASS_HANDLEOBJECT)) {
+        return NULL;
+    }
+
+    if (CScope_FindClassMemberObject(tclass, &pr, CMangler_OperatorName(TK_NEW))) {
+        if (pr.obj_10) {
+            if (CABI_IsOperatorNew(OBJECT(pr.obj_10))) {
+                return OBJECT(pr.obj_10);
+            }
+        } else {
+            for (nsol = pr.nsol_14; nsol; nsol = nsol->next) {
+                if (CABI_IsOperatorNew(OBJECT(nsol->object))) {
+                    return OBJECT(nsol->object);
+                }
+            }
+        }
+    }
+
+    return newh_func;
+}
+
+Boolean CABI_ConstructorReturnsThis(TypeClass *tclass) {
+    return 1;
+}
+
+Boolean CABI_DestructorReturnsThis(TypeClass *tclass) {
+    return 1;
+}
+
+FuncArg *CABI_GetFirstRealArgument(TypeFunc *tfunc) {
+    FuncArg *arg;
+    TypeClass *thiscls;
+    TypeMemberFunc *tmethod;
+
+    #line 2229
+    CError_ASSERT(tfunc->type == TYPEFUNC);
+
+    arg = tfunc->args;
+    if (tfunc->flags & FUNC_METHOD) {
+        tmethod = TYPE_METHOD(tfunc);
+        if (!tmethod->is_static) {
+            thiscls = tmethod->theclass;
+            #line 2237
+            CError_ASSERT(arg != NULL);
+            arg = arg->next;
+            if (tmethod->flags & FUNC_IS_DTOR) {
+                return NULL;
+            }
+            if (thiscls->flags & CLASS_HAS_VBASES && tmethod->flags & FUNC_IS_CTOR) {
+                #line 2257
+                CError_ASSERT(arg != NULL);
+                arg = arg->next;
+            }
+        }
+    }
+
+    return arg;
+}
+
+static Boolean CABI_ArgCheck(FuncArg *arg) {
+    return arg != NULL && arg->dexpr == NULL && !(arg->m_1a & 2);
+}
+
+Object *CABI_DummyDefaultConstructor(TypeClass *tclass) {
+    NameSpaceObjectList *nsol;
+    Object *ctor;
+    Object *currobj;
+    FuncArg *arg;
+    Object *funcobj;
+    HashNameNode *name;
+    TypeFunc *newconstructor;
+    ObjectList olst;
+
+    ctor = NULL;
+    for (nsol = CScope_FindName(tclass->nspace, constructor_name_node); nsol; nsol = nsol->next) {
+        currobj = OBJECT(nsol->object);
+        if (currobj->otype == OT_OBJECT && currobj->type->type == TYPEFUNC) {
+            if (TYPE_FUNC(currobj->type)->flags & FUNC_IS_TEMPL) {
+                continue;
+            }
+
+            arg = CABI_GetFirstRealArgument(TYPE_FUNC(currobj->type));
+            #line 2288
+            CError_ASSERT(arg != NULL);
+
+            if (!CABI_ArgCheck(arg)) {
+                if (ctor != NULL) {
+                    olst.next = NULL;
+                    olst.object = currobj;
+                    CError_OverloadedFunctionError(ctor, &olst);
+                    break;
+                }
+                ctor = currobj;
+            }
+        }
+    }
+
+    if (ctor == NULL) {
+        CError_Error(CErrorStr10203);
+        return NULL;
+    }
+
+    name = GetHashNameNodeExport("__defctor");
+    nsol = CScope_FindName(tclass->nspace, name);
+    if (nsol != NULL) {
+        #line 2315
+        CError_ASSERT(nsol->object->otype == OT_OBJECT && OBJECT(nsol->object)->type->type == TYPEFUNC);
+        return OBJECT(nsol->object);
+    }
+
+    newconstructor = galloc(sizeof(TypeMemberFunc));
+    memclrw(newconstructor, sizeof(TypeMemberFunc));
+    newconstructor->type = TYPEFUNC;
+    newconstructor->functype = TYPE(&void_ptr);
+    newconstructor->flags = FUNC_METHOD;
+    TYPE_METHOD(newconstructor)->theclass = tclass;
+
+    CDecl_SetFuncFlags(newconstructor, 0);
+    if (tclass->flags & CLASS_HAS_VBASES) {
+        CDecl_AddArgument(newconstructor, TYPE(&stsignedshort));
+    }
+    CDecl_AddThisPointerArgument(newconstructor, tclass);
+
+    funcobj = CParser_NewCompilerDefFunctionObject();
+    funcobj->type = TYPE(newconstructor);
+    funcobj->qual = Q_INLINE | Q_MANGLE_NAME;
+    funcobj->nspace = tclass->nspace;
+    funcobj->name = name;
+
+    CScope_AddObject(tclass->nspace, name, OBJ_BASE(funcobj));
+    CMid_RegisterDummyCtorFunction(funcobj, ctor);
+
+    return funcobj;
 }

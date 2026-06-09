@@ -16,6 +16,12 @@ typedef enum CABIDestroyMode {
     CABIDestroy3 = 3
 } CABIDestroyMode;
 
+typedef struct OffsetList {
+    struct OffsetList *next;
+    SInt32 offset;
+    SInt8 m_08;
+} OffsetList;
+
 typedef struct VTableHeaderInfo {
     SInt32 size;
     UInt32 m_04;
@@ -52,6 +58,10 @@ extern ENode *CABI_AcquireGuardVariable(Object *obj);
 extern Object *CABI_NewGuardVariable(Object *expr);
 extern Boolean CABI_PassedByReference(TypeClass *type);
 extern ENode *CABI_AddPointerOffset(ENode *base, SInt32 offset);
+extern Boolean CABI_ConstructorReturnsThis(TypeClass *tclass);
+extern Boolean CABI_DestructorReturnsThis(TypeClass *tclass);
+extern FuncArg *CABI_GetFirstRealArgument(TypeFunc *tfunc);
+extern Object *CABI_DummyDefaultConstructor(TypeClass *tclass);
 
 #ifdef __MWERKS__
 #pragma options align=reset

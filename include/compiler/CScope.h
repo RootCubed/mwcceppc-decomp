@@ -23,10 +23,10 @@ struct CScopeSave {
 typedef struct NameResult {
     NameSpace *nspace_0;
     HashNameNode *name_4;
-    Type *type;
-    UInt32 qual;
     ObjBase *obj_10;
     NameSpaceObjectList *nsol_14;
+    Type *type;
+    UInt32 qual;
     BClassList *bcl_18;
     Boolean x1C;
     Boolean x1D;
@@ -34,6 +34,7 @@ typedef struct NameResult {
     Boolean x1F;
     Boolean x20;
     Boolean x21;
+    UInt8 pad[12];
 } NameResult;
 
 typedef struct CScopeNSIterator {

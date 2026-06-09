@@ -62,6 +62,7 @@ extern void CClass_CheckObjectAccess(BClassList *path, Object *obj);
 extern void CClass_CheckEnumAccess(BClassList *path, ObjEnumConst *objec);
 extern Type *CClass_CombineClassAccessQualifiers(Type *type, UInt32 qual1, UInt32 qual2, UInt32 *outflags);
 extern ENode *CClass_AccessMember(ENode *classexpr, Type *type, UInt32 qual, SInt32 offset);
+extern VClassList *CClass_FindVirtualBase(TypeClass *tclass, TypeClass *baseclass);
 
 #ifdef __MWERKS__
 #pragma options align=reset

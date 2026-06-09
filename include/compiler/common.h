@@ -13,7 +13,7 @@ typedef struct HashNameNode {
     struct HashNameNode *next;
     SInt32 id;
     SInt16 hashval;
-    char name[1];
+    char name[];
 } HashNameNode;
 
 // TODO move me into CPrep.h or something?

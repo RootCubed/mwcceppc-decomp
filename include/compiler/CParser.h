@@ -7,7 +7,7 @@
 #include <compiler/types.h>
 
 #ifdef __MWERKS__
-#pragma options align=mac68k
+// #pragma options align=mac68k
 #endif
 
 enum {
@@ -628,7 +628,7 @@ extern void CParser_ParseGlobalDeclaration(void);
 extern void cparser(void);
 
 #ifdef __MWERKS__
-#pragma options align=reset
+// #pragma options align=reset
 #endif
 
 #endif

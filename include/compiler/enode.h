@@ -188,7 +188,7 @@ typedef union ENodeUnion {
     } objlist;
     EMemberInfo *emember;
     void *inst;
-    MemInitializer *ctorinit;
+    CtorChain *ctorinit;
     Statement *stmt;
     struct {
         union {
@@ -219,11 +219,10 @@ typedef union ENodeUnion {
 struct ENode {
     ENodeType type;
     UInt8 cost;
-    UInt16 flags;
     Boolean ignored;
     Boolean hascall;
-    // void *loc; - might not be in pro7?
     Type *rtype;
+    UInt32 flags;
     PointsToFunction *pointsTo;
     ENodeUnion data;
 };
@@ -232,6 +231,7 @@ enum {
     ENODE_FLAG_CONST = Q_CONST,
     ENODE_FLAG_VOLATILE = Q_VOLATILE,
     ENODE_FLAG_QUALS = Q_CONST | Q_VOLATILE,
+    ENODE_FLAG_8 = 0x8,
     ENODE_FLAG_10 = 0x10,
     ENODE_FLAG_80 = 0x80
 };

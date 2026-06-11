@@ -202,6 +202,7 @@ enum {
     CLASS_IS_TEMPL_ANY = CLASS_IS_TEMPL | CLASS_IS_TEMPL_INST,
     CLASS_EMPTY = 0x1000, // is 0 bytes (forced to 1 byte for ABI reasons)
     CLASS_COM_OBJECT = 0x2000, // inherits from __comobject
+    CLASS_FLAGS_4000 = 0x4000,
     CLASS_FLAGS_8000 = 0x8000
 };
 

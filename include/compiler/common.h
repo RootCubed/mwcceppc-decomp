@@ -135,7 +135,7 @@ typedef struct GList GList;
 typedef struct Initializer Initializer;
 typedef struct InlineXRef InlineXRef;
 typedef struct Macro Macro;
-typedef struct MemInitializer MemInitializer;
+typedef struct CtorChain CtorChain;
 typedef struct NameSpace NameSpace;
 typedef struct NameSpaceName NameSpaceName;
 typedef struct NameSpaceList NameSpaceList;

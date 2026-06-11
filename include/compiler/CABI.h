@@ -41,8 +41,6 @@ extern void CABI_MakeDefaultArgConstructor(TypeClass *tclass, Object *func);
 extern ENode *CABI_MakeThisExpr(TypeClass *tclass, SInt32 offset);
 extern SInt32 CABI_GetCtorOffsetOffset(TypeClass *tclass, TypeClass *base);
 extern Object *CABI_ConstructorCallsNew(TypeClass *tclass);
-typedef Statement *(*TransConstructorCallback)(Statement *stmt, TypeClass *tclass, TypeClass *base, SInt32 offset, Boolean flag);
-extern void CABI_TransConstructor(Object *obj, Statement *stmt, TypeClass *tclass, TransConstructorCallback callback, Boolean has_try);
 extern void CABI_MakeDefaultConstructor(TypeClass *tclass, Object *func);
 extern void CABI_MakeDefaultCopyConstructor(TypeClass *tclass, Object *func);
 extern void CABI_MakeDefaultAssignmentOperator(TypeClass *tclass, Object *func);
@@ -62,6 +60,9 @@ extern Boolean CABI_ConstructorReturnsThis(TypeClass *tclass);
 extern Boolean CABI_DestructorReturnsThis(TypeClass *tclass);
 extern FuncArg *CABI_GetFirstRealArgument(TypeFunc *tfunc);
 extern Object *CABI_DummyDefaultConstructor(TypeClass *tclass);
+extern ENode *CABI_GetVBaseCTorArg(TypeClass *tclass, Type *type, Boolean value);
+extern void CABI_FinishConstructor(Object *object, Statement *stmt, Statement *stmt2, Boolean p4, Boolean error_check, Boolean p6);
+extern void CABI_FinishDestructor(Object *object, Statement *stmt, Statement *stmt2, Boolean error_check);
 
 #ifdef __MWERKS__
 #pragma options align=reset

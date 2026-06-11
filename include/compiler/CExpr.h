@@ -122,6 +122,7 @@ extern ENode *CExpr_New_ELOR_Node(ENode *left, ENode *right);
 extern ENode *CExpr_NewDyadicNode(ENode *left, ENodeType nt, ENode *right);
 extern ENode *CExpr_New_ECOND_Node(ENode *cond, ENode *expr1, ENode *expr2);
 extern ENode *CExpr_New_EINDIRECT_Node(Object *obj);
+extern ENode *CExpr_New_EOBJREF_Node(Object *obj, Boolean);
 extern ENode *assignment_expression(void);
 extern ENode *conv_assignment_expression(void);
 extern void CExpr_CheckUnusedExpression(ENode *expr);

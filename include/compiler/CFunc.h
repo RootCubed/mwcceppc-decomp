@@ -73,6 +73,7 @@ struct Statement {
     ExceptionAction *dobjstack;
     SInt32 sourceoffset;
     HashNameNode *sourcefilepath;
+    UInt8 pad[4];
 };
 
 typedef struct InitExpr {
@@ -148,17 +149,18 @@ extern void CFunc_CodeCleanup(Statement *stmt);
 extern void CFunc_DestructorCleanup(Statement *stmt);
 extern Statement *CFunc_GenerateLoop(Statement *stmt, Type *type, ENode *lowerBound, ENode *upperBound, ENode *increment1, ENode *increment2, ENode *(*callback)(ENode *, ENode *));
 extern void CFunc_CompoundStatement(DeclThing *thing);
-extern void CFunc_SetupNewFuncArgs(Object *func, FuncArg *args);
-extern NameSpace *CFunc_FuncGenSetup(Statement *stmt, Object *func);
+extern void CFunc_SetupNewFuncArgs(NameSpace *nspace, Object *func, FuncArg *args);
+extern NameSpace *CFunc_FuncGenSetup(NameSpace *nspace, Statement *stmt, Object *func, Boolean except);
 extern CFuncSave *CFunc_GetGlobalCompilerState(void);
 extern void CFunc_SetGlobalCompilerState(CFuncSave *state);
-extern void CFunc_Gen(Statement *stmt, Object *func, UInt8 unk);
+extern void CFunc_Gen(Statement *stmt, Object *func);
 extern void CFunc_CheckClassCtors(TypeClass *tclass);
 extern void CFunc_ParseFuncDef(Object *func, DeclInfo *di, TypeClass *tclass, Boolean is_method, Boolean is_static, NameSpace *nspace);
 extern void InitExpr_Register(ENode *expr, Object *object);
 extern void CFunc_GenerateDummyFunction(Object *func);
 extern void CFunc_GenerateSingleExprFunc(Object *func, ENode *expr);
 extern void CFunc_GenerateDummyCtorFunc(Object *func, Object *real_ctor);
+extern void CFunc_ErrorCheck(Object *func, Statement *stmt);
 
 #ifdef __MWERKS__
 #pragma options align=reset

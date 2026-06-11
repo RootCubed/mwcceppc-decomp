@@ -10,6 +10,10 @@
 enum {
     // "class has no default constructor"
     CErrorStr10203 = 10203,
+    // "illegal use of '%u'"
+    CErrorStr10213 = 10213,
+    // "template too complex or recursive"
+    CErrorStr10214 = 10214,
     CErrorStrMAX
 };
 

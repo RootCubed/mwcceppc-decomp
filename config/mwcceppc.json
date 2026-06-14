@@ -20,11 +20,12 @@
     "slices": [
         {
             "nonMatching": true,
-            "source": "OS.c",
+            "compilerFlags": "-O4 -inline off -enum min -wchar_t on -bool off -Cpp_exceptions off -str noreadonly -nostdinc",
+            "source": "OS/win32.c",
             "memoryRanges": {
-                ".text": "0xe960-0xea03",
-                ".data": "0x10df3-0x10e2f",
-                ".bss": "0xf3c-0xf48"
+                ".text": "0xe880-0x11460",
+                ".data": "0x10dd3-0x10e4c",
+                ".bss": "0xd18-0xf48"
             }
         },
         {

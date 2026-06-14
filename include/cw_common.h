@@ -6,7 +6,7 @@
  */
 
 #include <common.h>
-#include <oslib.h>
+#include <OS.h>
 #include <plugin.h>
 
 // typedef struct VersionInfo {

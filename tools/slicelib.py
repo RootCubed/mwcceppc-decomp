@@ -18,6 +18,7 @@ def parse_int_str(value: str | int) -> int:
 class SliceData:
     source: str
     memoryRanges: dict[str, str]
+    addRelocations: list[dict] = field(default_factory=list)
     compilerFlags: str = field(default='')
     nonMatching: bool = field(default=False)
 
@@ -73,6 +74,7 @@ class Slice:
     sliceName: str
     source: str
     sliceSecs: list[SliceSection] = field(default_factory=list)
+    addRelocations: list[Relocation] = field(default_factory=list)
     ccFlags: str = field(default='')
     nonMatching: bool = field(default=False)
 
@@ -88,6 +90,16 @@ class SliceFile:
 
     def unit_name(self) -> str:
         return Path(self.meta.fileName).stem
+
+@dataclass
+class Relocation:
+    location: int
+    symbol: int
+    offset: int
+
+    def __post_init__(self):
+        self.location = parse_int_str(self.location)
+        self.symbol = parse_int_str(self.symbol)
 
 
 def make_filler_slice(slice_name: str, sec_range: dict[str, tuple[int, int]], slice_meta: SliceMeta) -> Optional[Slice]:
@@ -119,6 +131,9 @@ def load_slice_file(src: Path) -> SliceFile:
         filler_sec_range: dict[str, tuple] = {section: (0, 0) for section in curr_sec_positions}
         slice_name = str(Path(slice.source).with_suffix('.o'))
         parsed_slice = Slice(slice_name, slice.source, ccFlags=slice.compilerFlags, nonMatching=slice.nonMatching)
+
+        for reloc in slice.addRelocations:
+            parsed_slice.addRelocations.append(Relocation(**reloc))
 
         # Parse slice sections
         slice_sections = slice.memoryRanges

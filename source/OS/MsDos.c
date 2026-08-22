@@ -1,10 +1,7 @@
-#include "winerror.h"
+#include <assert.h>
 #include <common.h>
 
-#include <OS/OS.h>
-#include <OS/MemUtils.h>
-#include <OS/win32.h>
-#include <OS/StringExtras.h>
+#include <OS.h>
 
 #include <Windows.h>
 #include <ctype.h>
@@ -13,7 +10,7 @@
 
 static char *MW_CYGDRIVE_PREFIX;
 static char *MW_CYGWIN_ROOT;
-static UInt8 old_cygwin_softlinks;
+static Boolean old_cygwin_softlinks;
 static Boolean COMSTA_init;
 static char spec_buffer[MAX_PATH];
 static char file_buffer[0x20];
@@ -90,7 +87,7 @@ int __stdcall OS_SetFileType(const OSSpec *spec, const uOSTypePair *type) {
     return 0;
 }
 
-int __stdcall OS_GetFileTime(const OSSpec *spec, time_t *crtm, time_t *chtm) {
+int __stdcall OS_GetFileTime(const OSSpec *spec, MacTime *crtm, MacTime *chtm) {
     HANDLE handle;
     int err;
     FILETIME creation;
@@ -110,18 +107,18 @@ int __stdcall OS_GetFileTime(const OSSpec *spec, time_t *crtm, time_t *chtm) {
     OS_Close(handle);
 
     if (chtm) {
-        chtm[0] = lastWrite.dwLowDateTime;
-        chtm[1] = lastWrite.dwHighDateTime;
+        chtm->low = lastWrite.dwLowDateTime;
+        chtm->high = lastWrite.dwHighDateTime;
     }
     if (crtm) {
-        crtm[0] = creation.dwLowDateTime;
-        crtm[1] = creation.dwHighDateTime;
+        crtm->low = creation.dwLowDateTime;
+        crtm->high = creation.dwHighDateTime;
     }
 
     return err;
 }
 
-int __stdcall OS_SetFileTime(const OSSpec *spec, const time_t *crtm, const time_t *chtm) {
+int __stdcall OS_SetFileTime(const OSSpec *spec, const MacTime *crtm, const MacTime *chtm) {
     FILETIME creation;
     FILETIME lastWrite;
     FILETIME *pLastWrite;
@@ -130,13 +127,13 @@ int __stdcall OS_SetFileTime(const OSSpec *spec, const time_t *crtm, const time_
     int err;
     
     if (crtm) {
-        creation.dwLowDateTime = crtm[0];
-        creation.dwHighDateTime = crtm[1];
+        creation.dwLowDateTime = crtm->low;
+        creation.dwHighDateTime = crtm->high;
     }
 
     if (chtm) {
-        lastWrite.dwLowDateTime = chtm[0];
-        lastWrite.dwHighDateTime = chtm[1];
+        lastWrite.dwLowDateTime = chtm->low;
+        lastWrite.dwHighDateTime = chtm->high;
     }
 
     err = OS_Open(spec, OSWrite, &handle);
@@ -613,10 +610,43 @@ int __stdcall OS_CanonPath(const char *src, char *dst) {
 
 // Non-matching
 int __stdcall OS_IsFullPath(const char *path) {
-    return 0;
+    BOOL out;
+    BOOL absolute;
+    BOOL in_cygdrive;
+    BOOL unc_path;
+    int len;
+
+    unc_path = FALSE;
+    out = TRUE;
+    in_cygdrive = TRUE;
+    absolute = TRUE;
+
+    if (path[0] == '\\' && path[1] == '\\') {
+        unc_path = TRUE;
+    }
+
+    if (!unc_path) {
+        if (!isalpha(path[0]) || path[1] != ':' || path[2] != '\\') {
+            absolute = FALSE;
+        }
+    }
+
+    if (!absolute) {
+        if (MW_CYGDRIVE_PREFIX != NULL) {
+            if (ustrncmp(path, MW_CYGDRIVE_PREFIX, strlen(MW_CYGDRIVE_PREFIX) == 0) == 0) {
+                in_cygdrive = FALSE;
+            }
+        }
+    }
+
+    if (!in_cygdrive && (MW_CYGWIN_ROOT == NULL || path[0] != '/' || path[1] == '/')) {
+        out = FALSE;
+    }
+
+    return out;
 }
 
-int __stdcall OS_EqualPath(const char *a, const char *b) {
+BOOL __stdcall OS_EqualPath(const char *a, const char *b) {
     return ustrcmp(a, b) == 0;
 }
 
@@ -659,10 +689,10 @@ int __stdcall OS_MakeFileSpecEx(const char *path, Boolean bool1, Boolean bool2, 
     }
     
     if ((isfile & 2U) != 0) {
-        return 5;
+        return ERROR_ACCESS_DENIED;
     }
 
-    return 0;
+    return ERROR_SUCCESS;
 }
 
 int __stdcall OS_MakeFileSpec(const char *path, OSSpec *spec) {
@@ -746,8 +776,8 @@ int __stdcall OS_MakePathSpecEx(const char *vol, const char *dir, Boolean bool1,
     if (vol_size != 0) {
         return vol_size;
     }
-    if ((isfile & 1U) != 0) {
-        return 0x10b;
+    if (!isfile) {
+        return ERROR_DIRECTORY;
     }
     return 0;
 }
@@ -767,7 +797,7 @@ int __stdcall OS_MakeNameSpec(const char *name, OSNameSpec *spec) {
     }
 
     if (strchr(name, '\\') != NULL) {
-        return 5;
+        return ERROR_ACCESS_DENIED;
     }
 
     if (strpbrk(name, "<>:\"/\\|") != NULL) {
@@ -783,7 +813,7 @@ char* __stdcall OS_SpecToString(const OSSpec *spec, char *path, int size) {
     int name_size;
     
     if (size == 0) {
-        size = 0x104;
+        size = MAX_PATH;
     }
 
     if (path == NULL) {
@@ -809,4 +839,601 @@ char* __stdcall OS_SpecToString(const OSSpec *spec, char *path, int size) {
     memcpy(path + path_size, spec->name.s, name_size);
     path[path_size + name_size] = '\0';
     return path;
+}
+
+char* __stdcall OS_PathSpecToString(const OSPathSpec *pspec, char *path, int size) {
+    int len;
+    
+    if (size == 0) {
+        size = MAX_PATH;
+    }
+
+    if (path == NULL) {
+        path = xmalloc_or_null(size);
+        if (path == NULL) {
+            return NULL;
+        }
+    }
+
+    len = strlen(pspec->s);
+    if (len >= size) {
+        len = size - 1;
+    }
+
+    memcpy(path, pspec->s, len);
+    path[len] = '\0';
+    return path;
+}
+
+char* __stdcall OS_NameSpecToString(const OSNameSpec *nspec, char *name, int size) {
+    int len;
+    
+    if (size == 0) {
+        size = 0x100;
+    }
+
+    if (name == NULL) {
+        name = xmalloc_or_null(size);
+        if (name == NULL) {
+            return NULL;
+        }
+    }
+
+    len = strlen(nspec->s);
+    if (len >= size) {
+        len = size - 1;
+    }
+
+    memcpy(name, nspec->s, len);
+    name[len] = '\0';
+    return name;
+}
+
+BOOL __stdcall OS_EqualSpec(const OSSpec *a, const OSSpec *b) {
+    return OS_EqualPathSpec(&a->path, &b->path) && OS_EqualNameSpec(&a->name, &b->name);
+}
+
+BOOL __stdcall OS_EqualPathSpec(const OSPathSpec *a, const OSPathSpec *b) {
+    return OS_EqualPath(a->s, b->s);
+}
+
+BOOL __stdcall OS_EqualNameSpec(const OSNameSpec *a, const OSNameSpec *b) {
+    return OS_EqualPath(a->s, b->s);
+}
+
+BOOL __stdcall OS_IsDir(const OSSpec *spec) {
+    int len;
+    int attrs;
+
+    if (OS_SpecToString(spec,spec_buffer,MAX_PATH) == 0) {
+        return ERROR_BUFFER_OVERFLOW;
+    }
+
+    len = strlen(spec_buffer) - 1;
+    if (spec_buffer[len] == '\\') {
+        spec_buffer[len] = '\0';
+    }
+    attrs = GetFileAttributesA(spec_buffer);
+    if (attrs != -1) {
+        return (attrs & 0x10) != 0;
+    }
+
+    return FALSE;
+}
+
+BOOL __stdcall OS_IsFile(const OSSpec *spec) {
+    int len;
+    int attrs;
+
+    if (OS_SpecToString(spec,spec_buffer,MAX_PATH) == 0) {
+        return ERROR_BUFFER_OVERFLOW;
+    }
+
+    len = strlen(spec_buffer) - 1;
+    if (spec_buffer[len] == '\\') {
+        spec_buffer[len] = '\0';
+    }
+    attrs = GetFileAttributesA(spec_buffer);
+    if (attrs != -1) {
+        return (attrs & 0x10) == 0;
+    }
+
+    return FALSE;
+}
+
+// Not sure where to put this
+extern BOOL __cdecl LookupShortcut(char* in, char* out);
+
+BOOL ReadShortcut(char* link, char* target) {
+    char* end;
+    int len;
+    char path[MAX_PATH];
+
+    end = link + strlen(link);
+
+    if (end > link + 4) {
+        if (ustrcmp(end - 4, ".lnk") == 0) {
+            return LookupShortcut(link, target);
+        }
+    }
+
+    len = end - link;
+
+    if ((len + 4) >= MAX_PATH) {
+        return FALSE;
+    }
+
+    memcpy(path, link, len);
+    strcpy(path + len, ".lnk");
+    return LookupShortcut(path, target);
+}
+
+BOOL ReadShortcutSpec(const OSSpec* spec, char* param_2) {
+    char path[MAX_PATH];
+
+    OS_SpecToString(spec, path, MAX_PATH);
+    return ReadShortcut(path, param_2);
+}
+
+BOOL ReadCygwinSoftlink(char* path, char* param_2) {
+    char buf[12];
+    FILE* file;
+    int read;
+
+    file = fopen(path, "r");
+    if (file == NULL) {
+        return FALSE;
+    }
+
+    if (fread(buf, 1, 10, file) == 10) {
+        if (memcmp(buf, "!<symlink>", 10) == 0) {
+            read = fread(param_2, 1, MAX_PATH - 1, file);
+            if (read > 0 && file->state.eof != 0) {
+                param_2[read] = 0;
+                fclose(file);
+                return TRUE;
+            }
+        }
+    }
+
+    fclose(file);
+    return FALSE;
+}
+
+BOOL ReadCygwinSoftlinkSpec(const OSSpec* spec, char* param_2) {
+    HANDLE handle = NULL;
+    UInt32 len = 10;
+    char buf[12];
+
+    if (OS_Open(spec, 0, &handle) == 0) {
+        if (OS_Read(handle, buf, &len) == 0 && len == 10) {
+            if (memcmp(buf, "!<symlink>", 10) == 0) {
+                if (OS_GetSize(handle, &len) == 0) {
+                    len -= 10;
+
+                    if (len < MAX_PATH - 1) {
+                        if (OS_Read(handle, param_2, &len) == 0) {
+                            param_2[len] = 0;
+                            OS_Close(handle);
+                            return TRUE;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    OS_Close(handle);
+    return FALSE;
+}
+
+BOOL __stdcall OS_IsLink(const OSSpec *spec) {
+    char* dot;
+    char buf[260];
+    BOOL out;
+
+    dot = strrchr(spec->name.s, '.');
+    if (dot != NULL) {
+        if (ustrcmp(dot, ".lnk") == 0) {
+            return ReadShortcutSpec(spec, buf);
+        }
+    }
+
+    if (old_cygwin_softlinks) {
+        return ReadCygwinSoftlinkSpec(spec, buf);
+    }
+
+    return FALSE;
+}
+
+int __stdcall OS_ResolveLink(const OSSpec *link, OSSpec *target) {
+    char* dot;
+    char path[MAX_PATH];
+    
+    dot = strrchr(link->name.s, '.');
+    if (dot != NULL) {
+        if (ustrcmp(dot, ".lnk") == 0) {
+            if (ReadShortcutSpec(link, path)) {
+                return OS_MakeSpec(path, target, NULL);
+            }
+        }
+    }
+
+    if (!old_cygwin_softlinks) {
+        memcpy(target->path.s, link->path.s, 0x204);
+    } else {
+        if (ReadCygwinSoftlinkSpec(link, path)) {
+            return OS_MakeSpec(path, target, NULL);
+        }
+    }
+
+    return 2;
+}
+
+int __stdcall OS_OpenDir(const OSPathSpec *spec, OSOpenedDir *ref) {
+    OSPathSpec spec_buf;
+
+    ref->data = xmalloc_or_null(sizeof(WIN32_FIND_DATAA));
+    if (ref->data == NULL) {
+        return ERROR_NOT_ENOUGH_MEMORY;
+    }
+
+    memcpy(ref->spec.s, spec->s, MAX_PATH);
+
+    strcpy(spec_buf.s, spec->s);
+    strcat(spec_buf.s, "*");
+    ref->dir = FindFirstFile(spec_buf.s, ref->data);
+    if (ref->dir != INVALID_HANDLE_VALUE) {
+        return 0;
+    } else {
+        return GetLastError();
+    }
+}
+
+int __stdcall OS_ReadDir(OSOpenedDir *ref, OSSpec *spec, char *filename, Boolean *isfile) {
+    LPWIN32_FIND_DATAA data = ref->data;
+    OSPathSpec spec_buffer;
+    int filename_len;
+    int spec_len;
+    char* question_mark;
+    int i;
+    int old_attrs;
+
+    if (isfile != NULL) {
+        *isfile = FALSE;
+    }
+
+    do {
+        do {
+            do {
+                if (ref->dir == INVALID_HANDLE_VALUE) {
+                    return ERROR_FILE_NOT_FOUND;
+                }
+                filename_len = strlen(data->cFileName);
+
+                if (filename_len + 1 < 0x100 && strchr(data->cFileName, '?') == NULL) {
+                    memcpy(spec_buffer.s, data->cFileName, filename_len);
+                } else {
+                    filename_len = strlen(data->cAlternateFileName);
+                    if (filename_len > 0x100) {
+                        filename_len = 0xff;
+                    }
+
+                    for (i = 0; i < filename_len; i++) {
+                        spec_buffer.s[i] = tolower(data->cAlternateFileName[i]);
+                    }
+                }
+
+                spec_buffer.s[filename_len] = 0;
+
+                old_attrs = data->dwFileAttributes;
+                if (!FindNextFile(ref->dir, data)) {
+                    OS_CloseDir(ref);
+                }
+            } while(memcmp(spec_buffer.s, ".", 2) == 0);
+        } while(memcmp(spec_buffer.s, "..", 3) == 0);
+
+        old_attrs &= 0x10;
+    } while(MAX_PATH <= strlen(ref->spec.s) + filename_len + (int)(old_attrs != 0));
+
+    if (old_attrs != 0) {
+        spec_len = strlen(ref->spec.s);
+        memcpy(spec->path.s, ref->spec.s, spec_len);
+        memcpy(spec->path.s + spec_len, spec_buffer.s, filename_len);
+        spec->path.s[spec_len + filename_len] = '\\';
+        spec->path.s[spec_len + filename_len + 1] = '\0';
+        spec->name.s[0] = '\0';
+        *isfile |= 2;
+    } else {
+        strcpy(spec->path.s, ref->spec.s);
+        memcpy(spec->name.s, spec_buffer.s, filename_len + 1);
+        *isfile |= 1;
+    }
+
+    memcpy(filename,spec_buffer.s,filename_len + 1);
+    return 0;
+}
+
+int __stdcall OS_CloseDir(OSOpenedDir *ref) {
+    if (ref->dir != INVALID_HANDLE_VALUE) {
+        if (!FindClose(ref->dir)) {
+            return GetLastError();
+        }
+
+        if (ref->data != NULL) {
+            xfree(ref->data);
+        }
+
+        ref->data = NULL;
+        ref->dir = INVALID_HANDLE_VALUE;
+    }
+
+    return 0;
+}
+
+UInt32 __stdcall OS_GetMilliseconds() {
+    return GetTickCount();
+}
+
+void __stdcall OS_GetTime(MacTime *p) {
+    long high;
+    long low;
+    FILETIME file_time;
+    SYSTEMTIME system_time;
+
+    GetSystemTime(&system_time);
+    SystemTimeToFileTime(&system_time, &file_time);
+    
+    low = file_time.dwLowDateTime;
+    high = file_time.dwHighDateTime;
+
+    p->low = low;
+    p->high = high;
+}
+
+int __stdcall OS_NewHandle(UInt32 size, OSHandle *hand) {
+    hand->addr = GlobalAlloc(0x40, size);
+    hand->used = size;
+    if (hand->addr != NULL) {
+        return 0;
+    } else {
+        return GetLastError();
+    }
+}
+
+int __stdcall OS_ResizeHandle(OSHandle *hand, UInt32 size) {
+    void* addr = GlobalReAlloc(hand->addr, size, 0x42);
+
+    if (addr != NULL) {
+        hand->addr = addr;
+        hand->used = size;
+        return 0;
+    } else {
+        hand->addr = NULL;
+        hand->used = 0;
+        return GetLastError();
+    }
+}
+
+void* __stdcall OS_LockHandle(OSHandle *hand) {
+    if (GlobalFlags(hand->addr) != GMEM_INVALID_HANDLE) {
+        return hand->addr;
+    }
+
+    return NULL;
+}
+
+void __stdcall OS_UnlockHandle(OSHandle *hand) {}
+
+int __stdcall OS_FreeHandle(OSHandle *hand) {
+    if (GlobalFree(hand->addr) != NULL) {
+        return GetLastError();
+    }
+    hand->addr = NULL;
+    hand->used = 0;
+
+    return 0;
+}
+
+int __stdcall OS_GetHandleSize(OSHandle *hand, UInt32 *size) {
+    if (GlobalFlags(hand->addr) != GMEM_INVALID_HANDLE) {
+        *size = hand->used;
+        return 0;
+    }
+
+    *size = 0;
+    return ERROR_NOT_ENOUGH_MEMORY;
+}
+
+void __stdcall OS_InvalidateHandle(OSHandle *hand) {
+    hand->addr = NULL;
+    hand->used = 0;
+}
+
+Boolean __stdcall OS_ValidHandle(OSHandle *hand) {
+    return hand != NULL && hand->addr != NULL;
+}
+
+// Non-matching
+int __stdcall OS_OSErrorToMacError(int err) {
+    /*
+    // Unfinished
+    switch (err) {
+        case ERROR_SUCCESS:             return noErr;
+        case ERROR_FILE_NOT_FOUND:      return fnfErr;
+        case ERROR_PATH_NOT_FOUND:      return dirNFErr;
+        case ERROR_TOO_MANY_OPEN_FILES: return tmfoErr;
+        case ERROR_ACCESS_DENIED:       return permErr;
+        case ERROR_NOT_ENOUGH_MEMORY:   return memFullErr;
+        case ERROR_INVALID_DATA:        return paramErr;
+        case ERROR_OUTOFMEMORY:         return memFullErr;
+        case ERROR_INVALID_DRIVE:       return nsvErr;
+        case ERROR_CURRENT_DIRECTORY:   return paramErr;
+        case ERROR_WRITE_PROTECT:       return wrPermErr;
+        case ERROR_NOT_READY:
+        case ERROR_CRC:                 return ioErr;
+        case ERROR_BAD_LENGTH:          return paramErr;
+        case ERROR_SEEK:                return ioErr;
+    }
+    */
+
+    return 0;
+}
+
+void __stdcall OS_TimeToMac(MacTime sectm, UInt32 *secs) {
+    static int days_in_month[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+    
+    FILETIME filetime;
+    SYSTEMTIME systemtime;
+    int years;
+    int days;
+    int days_simple;
+    int leap_years_simple;
+    int skip_centuries;
+    int leap_centuries;
+    int leap_years;
+    short month;
+
+    filetime.dwLowDateTime = sectm.low;
+    filetime.dwHighDateTime = sectm.high;
+    FileTimeToSystemTime(&filetime, &systemtime);
+
+    years = systemtime.wYear;
+    leap_years_simple = (years - 1901) / 4;
+    skip_centuries = (years - 1900) / 100;
+    leap_centuries = (years - 1601) / 400;
+    leap_years = leap_years_simple - skip_centuries + leap_centuries;
+    days = days_simple + leap_years;
+
+    if (((systemtime.wYear & 3) == 0) && (years != years / 100 * 100) || (years == years / 400 * 400)) {
+        days_in_month[1] = 29;
+    } else {
+        days_in_month[1] = 28;
+    }
+
+    if (systemtime.wMonth > 12 || systemtime.wMonth == 0) {
+        systemtime.wMonth = 1;
+        systemtime.wDayOfWeek = 0;
+    }
+
+    month = systemtime.wMonth - 1;
+    for (month = systemtime.wMonth - 1; month != 0; month--) {
+        days += days_in_month[(short)month - 1];
+    }
+    *secs = systemtime.wHour * 60 * 60 + (days + systemtime.wDay - 1) * 24 * 60 * 60 + systemtime.wMinute * 60 + systemtime.wSecond;
+}
+
+// Non-matching
+void __stdcall OS_MacToTime(UInt32 secs, MacTime *sectm) {}
+
+SInt16 __stdcall OS_RefToMac(HANDLE ref) {
+    if (ref == INVALID_HANDLE_VALUE || (long)ref < 0) {
+        return 0;
+    }
+
+#line 2027
+    assert((long)ref < 0xffff);
+    return (SInt16)(long)ref + 1;
+}
+
+int __stdcall OS_MacToRef(SInt16 refnum) {
+    if (refnum == 0) {
+        return -1;
+    } else {
+        return (int)refnum - 1;
+    }
+}
+
+int __stdcall OS_CloseLibrary(void *a) {
+    if (FreeLibrary(a)) {
+        return 0;
+    } else {
+        return GetLastError();
+    }
+}
+
+int __stdcall OS_LoadMacResourceFork(const OSSpec *spec, void **file_data, SInt32 *file_len) {
+    HANDLE handle;
+    HANDLE rsrcInfo;
+    HANDLE rsrc;
+    void* ptr;
+
+    if (OS_SpecToString(spec, spec_buffer, 0x104) == NULL) {
+        return ERROR_BUFFER_OVERFLOW;
+    }
+
+    handle = GetModuleHandle(spec_buffer);
+    if (handle == NULL) {
+        return GetLastError();
+    }
+
+    rsrcInfo = FindResource(handle, "#101", "MACRSRC");
+    if (rsrcInfo == NULL) {
+        return GetLastError();
+    }
+
+    rsrc = LoadResource(handle, rsrcInfo);
+    if (rsrc == NULL) {
+        return GetLastError();
+    }
+
+    ptr = LockResource(rsrc);
+    if (ptr == NULL) {
+        return GetLastError();
+    }
+
+    *file_data = ptr;
+    *file_len = SizeofResource(handle, rsrcInfo);
+    return 0;
+}
+
+int __stdcall OS_CreateMutex(OSMutex *mutex) {
+    void* ptr;
+    
+    mutex->lock = malloc(sizeof(CRITICAL_SECTION));
+
+    InitializeCriticalSection(mutex->lock);
+
+    return mutex->lock == NULL ? GetLastError() : 0;
+}
+
+int __stdcall OS_MapFile(HANDLE *ref, void **mapping, HANDLE file, DWORD size, Boolean readonly, Boolean executable) {
+    int access;
+    int protect;
+  
+    if (readonly) {
+        protect = PAGE_READONLY;
+        access = FILE_MAP_READ;
+    } else {
+        protect = PAGE_READWRITE;
+        access = FILE_MAP_READ | FILE_MAP_WRITE;
+    }
+
+    if (executable) {
+        protect = protect | PAGE_EXECUTE;
+    }
+
+    *ref = CreateFileMapping(file, NULL, protect, 0, size, NULL);
+    if (*ref == NULL) {
+        return GetLastError();
+    }
+
+    *mapping = MapViewOfFile(*ref, access, 0, 0, size);
+    if (*mapping == NULL) {
+        return GetLastError();
+    }
+
+    return 0;
+}
+
+int __stdcall OS_UnMapFile(HANDLE handle, void* mapping) {
+    if (!UnmapViewOfFile(mapping)) {
+        return GetLastError();
+    }
+
+    if (!CloseHandle(handle)) {
+        return GetLastError();
+    }
+
+    return 0;
 }

@@ -29,13 +29,11 @@ class SliceSectionInfo:
     align: int
     size: int
     secAlign: int = field(default=-1)
-    offset: int = field(default=0)
     addr: int = field(default=0)
 
     def __post_init__(self):
         self.size = parse_int_str(self.size)
         self.addr = parse_int_str(self.addr)
-        self.offset = parse_int_str(self.offset)
 
 
 class SliceType(Enum):
@@ -64,9 +62,6 @@ class SliceSection:
     start_offs: int
     end_offs: int
     alignment: int
-
-    def contains(self, section: int, addend: int) -> bool:
-        return section == self.sec_idx and self.start_offs <= addend < self.end_offs
 
 
 @dataclass
@@ -124,7 +119,7 @@ def load_slice_file(src: Path) -> SliceFile:
 
     # Initialize loop
     filler_slice_idx = 0
-    curr_sec_positions = {name: section.offset for name, section in slice_meta.sections.items() if section.size != 0}
+    curr_sec_positions = {name: section.addr for name, section in slice_meta.sections.items() if section.size != 0}
     for slice in slice_file.slices:
 
         # Create parsed slice
@@ -161,7 +156,7 @@ def load_slice_file(src: Path) -> SliceFile:
     # Add last slice which extends to the end of each section, if applicable
     filler_sec_range = {section: (0, 0) for section in curr_sec_positions}
     for name, offset in curr_sec_positions.items():
-        section_end = slice_meta.sections[name].size + slice_meta.sections[name].offset
+        section_end = slice_meta.sections[name].size + slice_meta.sections[name].addr
         filler_sec_range[name] = (offset, section_end)
 
     filler_slice = make_filler_slice(f'filler_{filler_slice_idx}.o', filler_sec_range, slice_meta)

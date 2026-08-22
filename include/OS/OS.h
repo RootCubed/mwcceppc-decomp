@@ -63,8 +63,18 @@ typedef struct {
 
 typedef struct {
     void *dir;
+    void *data;
     OSPathSpec spec;
 } OSOpenedDir; // assumed name, might be something like OSDirRef though?
+
+typedef struct {
+    void *lock;
+} OSMutex; // assumed name
+
+typedef struct {
+    time_t low;
+    time_t high;
+} MacTime;
 
 #ifdef	__MWERKS__
 #pragma options align=2

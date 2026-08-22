@@ -6,44 +6,96 @@
         "moduleNum": 0,
         "baseAddr": "00400000",
         "sections": {
-            ".text":  { "index": 0, "align": 16, "size": "0x272000" },
-            ".exc":   { "index": 1, "align": 4, "size": "0x200" },
-            ".rdata": { "index": 2, "align": 8, "size": "0x16200" },
-            ".data":  { "index": 3, "align": 8, "size": "0x7da00" },
-            ".rsc":   { "index": 4, "align": 8, "size": "0x12a00" },
-            ".CRT":   { "index": 5, "align": 4, "size": "0x200" },
-            ".idata": { "index": 6, "align": 4, "size": "0xc00" },
-            ".bss":   { "index": 7, "align": 4, "size": "0x794e5" },
-            ".reloc": { "index": 8, "align": 4, "size": "0x32e00" }
+            ".text": {
+                "index": 0,
+                "align": 16,
+                "size": "0x272000",
+                "addr": "0x401000"
+            },
+            ".exc": {
+                "index": 1,
+                "align": 4,
+                "size": "0x200",
+                "addr": "0x673000"
+            },
+            ".rdata": {
+                "index": 2,
+                "align": 8,
+                "size": "0x16200",
+                "addr": "0x674000"
+            },
+            ".data": {
+                "index": 3,
+                "align": 8,
+                "size": "0x7da00",
+                "addr": "0x68b000"
+            },
+            ".rsc": {
+                "index": 4,
+                "align": 8,
+                "size": "0x12a00",
+                "addr": "0x709000"
+            },
+            ".CRT": {
+                "index": 5,
+                "align": 4,
+                "size": "0x200",
+                "addr": "0x71c000"
+            },
+            ".idata": {
+                "index": 6,
+                "align": 4,
+                "size": "0xc00",
+                "addr": "0x71d000"
+            },
+            ".bss": {
+                "index": 7,
+                "align": 4,
+                "size": "0x794e5",
+                "addr": "0x71e000"
+            },
+            ".reloc": {
+                "index": 8,
+                "align": 4,
+                "size": "0x32e00",
+                "addr": "0x798000"
+            }
         }
     },
     "slices": [
         {
             "nonMatching": true,
             "compilerFlags": "-O4 -inline off -enum min -wchar_t on -bool off -Cpp_exceptions off -str noreadonly -nostdinc",
-            "source": "OS/win32.c",
+            "source": "OS/MsDos.c",
             "memoryRanges": {
-                ".text": "0xe880-0x11460",
-                ".data": "0x10dd3-0x10e4c",
-                ".bss": "0xd18-0xf48"
-            }
+                ".text": "0x40f880-0x412460",
+                ".data": "0x69bdd3-0x69bf20",
+                ".bss": "0x71ed18-0x71ef48"
+            },
+            "addRelocations": [
+                {
+                    "location": "0x40f8c3",
+                    "symbol": "0x71ed18",
+                    "offset": -2
+                }
+            ]
         },
         {
             "nonMatching": true,
             "source": "CABI.c",
             "memoryRanges": {
-                ".text": "0x167ad0-0x16dad0",
-                ".rdata": "0xc318-0xc338",
-                ".data": "0x42354-0x4235c"
+                ".text": "0x568ad0-0x56ead0",
+                ".rdata": "0x680318-0x680338",
+                ".data": "0x6cd354-0x6cd35c"
             }
         },
         {
             "nonMatching": true,
             "source": "CMangler.c",
             "memoryRanges": {
-                ".text": "0x16dad0-0x170030",
-                ".rdata": "0xc338-0xc510",
-                ".data": "0x42370-0x4285c"
+                ".text": "0x56ead0-0x571030",
+                ".rdata": "0x680338-0x680510",
+                ".data": "0x6cd370-0x6cd85c"
             }
         }
     ]

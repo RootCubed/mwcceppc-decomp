@@ -1,7 +1,6 @@
 #ifndef OS_WIN32_H
 #define OS_WIN32_H
 
-#include <common.h>
 #include <OS/OS.h>
 #include <Windows.h>
 
@@ -13,8 +12,8 @@ int __stdcall OS_Create(const OSSpec *spec, const uOSTypePair *type);
 int __stdcall OS_Status(const OSSpec *spec);
 int __stdcall OS_GetFileType(const OSSpec *spec, uOSTypePair *type);
 int __stdcall OS_SetFileType(const OSSpec *spec, const uOSTypePair *type);
-int __stdcall OS_GetFileTime(const OSSpec *spec, time_t *crtm, time_t *chtm);
-int __stdcall OS_SetFileTime(const OSSpec *spec, const time_t *crtm, const time_t *chtm);
+int __stdcall OS_GetFileTime(const OSSpec *spec, MacTime *crtm, MacTime *chtm);
+int __stdcall OS_SetFileTime(const OSSpec *spec, const MacTime *crtm, const MacTime *chtm);
 int __stdcall OS_Open(const OSSpec *spec, OSOpenMode mode, HANDLE *ref);
 int __stdcall OS_Write(HANDLE ref, const void *buffer, UInt32 *length);
 int __stdcall OS_Read(HANDLE ref, void *buffer, UInt32 *length);
@@ -59,7 +58,7 @@ int __stdcall OS_OpenDir(const OSPathSpec *spec, OSOpenedDir *ref);
 int __stdcall OS_ReadDir(OSOpenedDir *ref, OSSpec *spec, char *filename, Boolean *isfile);
 int __stdcall OS_CloseDir(OSOpenedDir *ref);
 UInt32 __stdcall OS_GetMilliseconds(void);
-void __stdcall OS_GetTime(time_t *p);
+void __stdcall OS_GetTime(MacTime *p);
 int __stdcall OS_NewHandle(UInt32 size, OSHandle *hand);
 int __stdcall OS_ResizeHandle(OSHandle *hand, UInt32 size);
 void* __stdcall OS_LockHandle(OSHandle *hand);
@@ -68,15 +67,17 @@ int __stdcall OS_FreeHandle(OSHandle *hand);
 int __stdcall OS_GetHandleSize(OSHandle *hand, UInt32 *size);
 void __stdcall OS_InvalidateHandle(OSHandle *hand);
 Boolean __stdcall OS_ValidHandle(OSHandle *hand);
-OSErr __stdcall OS_MacError(int err);
-void __stdcall OS_TimeToMac(time_t sectm, UInt32 *secs);
-void __stdcall OS_MacToTime(UInt32 secs, time_t *sectm);
+int __stdcall OS_OSErrorToMacError(int err);
+void __stdcall OS_TimeToMac(MacTime sectm, UInt32 *secs);
+void __stdcall OS_MacToTime(UInt32 secs, MacTime *sectm);
 SInt16 __stdcall OS_RefToMac(HANDLE ref);
 int __stdcall OS_MacToRef(SInt16 refnum);
 int __stdcall OS_OpenLibrary(const char *a, void **lib);
 int __stdcall OS_GetLibrarySymbol(void *a, void *b, void **sym);
 int __stdcall OS_CloseLibrary(void *a);
 int __stdcall OS_LoadMacResourceFork(const OSSpec *spec, void **file_data, SInt32 *file_len);
+int __stdcall OS_CreateMutex(OSMutex *mutex);
+//int __stdcall OS_MapFile(HANDLE *ref, void **mapping, HANDLE file, DWORD size, Boolean readonly, Boolean executable);
 Boolean __stdcall OS_IsMultiByte(const char *str1, const char *str2);
 
 #endif

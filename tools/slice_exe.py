@@ -15,6 +15,8 @@ from bisect import bisect_left
 import capstone
 
 def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[str, int]) -> COFF:
+    baseAddr = slice_file.meta.baseAddr
+
     coff_file = COFF()
 
     # .drectve section
@@ -30,7 +32,7 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
     dbg = cast(DebugDirectoryEntry, pe_file.data_directory[ImageDirectoryType.IMAGE_DIRECTORY_ENTRY_DEBUG])
     for s in dbg.codeview.modules:
         for (sec_idx, sym_addr, name) in s.symbols:
-            virt_addr = pe_file.sections[sec_idx].virt_addr + sym_addr + slice_file.meta.baseAddr
+            virt_addr = pe_file.sections[sec_idx].virt_addr + sym_addr + baseAddr
             addr_to_sym[virt_addr] = name
 
     sorted_sym_addrs = sorted(addr_to_sym.keys())
@@ -42,7 +44,9 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
 
     for sec in slice.sliceSecs:
         pe_sec = pe_file.sections[sec.sec_idx]
-        sec_data = pe_sec.data[sec.start_offs:sec.end_offs]
+        start_offs = sec.start_offs - pe_sec.virt_addr - baseAddr
+        end_offs = sec.end_offs - pe_sec.virt_addr - baseAddr
+        sec_data = pe_sec.data[start_offs:end_offs]
         coff_sec = COFFSection()
         coff_sec.sec_name = sec.sec_name
         coff_sec.data = bytearray(sec_data)
@@ -58,10 +62,10 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
         coff_file.symbols.append(sym)
 
         for addr in addr_to_sym:
-            if sec.start_offs <= addr - slice_file.meta.baseAddr - pe_sec.virt_addr < sec.end_offs:
+            if sec.start_offs <= addr < sec.end_offs:
                 sym = COFFSymbol()
                 sym.name = addr_to_sym[addr]
-                sym.value = addr - slice_file.meta.baseAddr - pe_sec.virt_addr - sec.start_offs
+                sym.value = addr - sec.start_offs
                 sym.type = 0x20 if coff_sec.flags & 0x00000020 != 0 else 0x0 # 0x00000020 = IMAGE_SCN_CNT_CODE
                 sym.section_number = actual_sec_idx + 2
                 sym.storage_class = 2
@@ -86,12 +90,12 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
             coff_sec.data[offset:offset+4] = addend.to_bytes(4, byteorder='little', signed=True)
 
         if not slice.sliceName.startswith('filler') and sec.sec_name == '.text':
-            for insn in md.disasm(sec_data, pe_sec.virt_addr + sec.start_offs + slice_file.meta.baseAddr):
+            for insn in md.disasm(sec_data, sec.start_offs):
                 found = False
                 for reloc in slice.addRelocations:
                     if insn.address == reloc.location:
                         is_absolute = not insn.group(capstone.x86.X86_GRP_BRANCH_RELATIVE)
-                        section_offset = insn.address - pe_sec.virt_addr - sec.start_offs - slice_file.meta.baseAddr
+                        section_offset = insn.address - sec.start_offs
                         addend = reloc.offset
                         add_relocation(section_offset + 1, addend, reloc.symbol, is_absolute)
                         found = True
@@ -105,19 +109,19 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
                     target = insn.operands[0].value.imm
                     if target in addr_to_sym:
                         is_absolute = not insn.group(capstone.x86.X86_GRP_BRANCH_RELATIVE)
-                        section_offset = insn.address - pe_sec.virt_addr - sec.start_offs - slice_file.meta.baseAddr
+                        section_offset = insn.address - sec.start_offs
                         add_relocation(section_offset + 1, 0, target, is_absolute)
 
                 if not insn.group(capstone.x86.X86_GRP_BRANCH_RELATIVE):
                     for op in insn.operands:
-                        if op.type == capstone.x86.X86_OP_MEM and slice_file.meta.baseAddr < op.value.mem.disp < 0x1000000 \
-                        or op.type == capstone.x86.X86_OP_IMM and slice_file.meta.baseAddr < op.value.imm < 0x1000000:
+                        if op.type == capstone.x86.X86_OP_MEM and baseAddr < op.value.mem.disp < 0x1000000 \
+                        or op.type == capstone.x86.X86_OP_IMM and baseAddr < op.value.imm < 0x1000000:
                             val = op.value.mem.disp if op.type == capstone.x86.X86_OP_MEM else op.value.imm
                             offset = insn.disp_offset if op.type == capstone.x86.X86_OP_MEM else insn.imm_offset
 
                             next_addr_below = sorted_sym_addrs[bisect_left(sorted_sym_addrs, val + 1) - 1]
                             name = addr_to_sym[next_addr_below]
-                            section_offset = insn.address - pe_sec.virt_addr - sec.start_offs - slice_file.meta.baseAddr
+                            section_offset = insn.address - sec.start_offs
                             addend = val - next_addr_below
                             is_absolute = True
                             if addend < 0x8000:

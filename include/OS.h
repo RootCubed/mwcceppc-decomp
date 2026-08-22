@@ -4,6 +4,8 @@
 #include <common.h>
 #include <OS/OS.h>
 #include <OS/Generic.h>
-#include <OS/win32.h>
+#include <OS/MsDos.h>
+#include <OS/MemUtils.h>
+#include <OS/StringExtras.h>
 
 #endif

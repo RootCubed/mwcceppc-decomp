@@ -72,12 +72,10 @@ void __stdcall OS_TimeToMac(MacTime sectm, UInt32 *secs);
 void __stdcall OS_MacToTime(UInt32 secs, MacTime *sectm);
 SInt16 __stdcall OS_RefToMac(HANDLE ref);
 int __stdcall OS_MacToRef(SInt16 refnum);
-int __stdcall OS_OpenLibrary(const char *a, void **lib);
-int __stdcall OS_GetLibrarySymbol(void *a, void *b, void **sym);
 int __stdcall OS_CloseLibrary(void *a);
 int __stdcall OS_LoadMacResourceFork(const OSSpec *spec, void **file_data, SInt32 *file_len);
 int __stdcall OS_CreateMutex(OSMutex *mutex);
-//int __stdcall OS_MapFile(HANDLE *ref, void **mapping, HANDLE file, DWORD size, Boolean readonly, Boolean executable);
-Boolean __stdcall OS_IsMultiByte(const char *str1, const char *str2);
+int __stdcall OS_MapFile(HANDLE *ref, void **mapping, HANDLE file, DWORD size, Boolean readonly, Boolean executable);
+int __stdcall OS_UnMapFile(HANDLE handle, void* mapping);
 
 #endif

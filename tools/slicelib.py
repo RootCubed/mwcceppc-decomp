@@ -63,6 +63,15 @@ class SliceSection:
     end_offs: int
     alignment: int
 
+@dataclass
+class Relocation:
+    location: int
+    symbol: int
+    offset: int
+
+    def __post_init__(self):
+        self.location = parse_int_str(self.location)
+        self.symbol = parse_int_str(self.symbol)
 
 @dataclass
 class Slice:
@@ -85,17 +94,6 @@ class SliceFile:
 
     def unit_name(self) -> str:
         return Path(self.meta.fileName).stem
-
-@dataclass
-class Relocation:
-    location: int
-    symbol: int
-    offset: int
-
-    def __post_init__(self):
-        self.location = parse_int_str(self.location)
-        self.symbol = parse_int_str(self.symbol)
-
 
 def make_filler_slice(slice_name: str, sec_range: dict[str, tuple[int, int]], slice_meta: SliceMeta) -> Optional[Slice]:
     slice_sections: list[SliceSection] = []

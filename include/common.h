@@ -103,6 +103,7 @@ enum {
     paramErr = -50,
     rfNumErr = -51,
     permErr = -54,
+    wrPermErr = -61,
     memFullErr = -108, // not enough memory
     nilHandleErr = -109, // pointer was nil
     memLockedErr = -117,

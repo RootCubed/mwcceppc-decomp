@@ -37,6 +37,8 @@ INCDIRS = [
     Path(COMPILERDIR, 'CodeWarrior', 'MSL', 'MSL_C', 'MSL_X86'),
     Path(COMPILERDIR, 'CodeWarrior', 'MSL', 'MSL_Extras', 'MSL_Common', 'Include'),
     Path(COMPILERDIR, 'CodeWarrior', 'MSL', 'MSL_Extras', 'MSL_Win32', 'Include'),
+    Path(COMPILERDIR, 'CodeWarrior', 'Win32-x86 Support', 'Headers', 'Win32 SDK'),
+    Path(COMPILERDIR, 'CodeWarrior', 'Win32-x86 Support', 'Headers', 'VCPP Headers'),
     Path(COMPILERDIR, 'CodeWarrior', 'Win32-x86 Support', 'Headers', 'Prefix Files'),
     Path(COMPILERDIR, 'CodeWarrior', '(CodeWarrior SDK)', 'Headers'),
 ]

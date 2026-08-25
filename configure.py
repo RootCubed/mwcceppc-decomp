@@ -55,7 +55,8 @@ def gen_compile_commands(slice_file: SliceFile):
         flags = mwcc_to_clang(flags)
         arguments = [
             '/usr/bin/clang', '-c', str(file), '-o', str(output),
-            '-D__INTEL__', '-Dwchar_t=unsigned int', '-D__option=',
+            '-D__INTEL__', '-Dwchar_t=unsigned int', '-D__option=', "-D_WIN32", "-D_M_IX86",
+            "-m32",
             '-Wno-ignored-attributes', '-Wno-pragma-pack', '-fdeclspec',
             *flags, *inc_dir_args
         ]
@@ -86,7 +87,9 @@ def mwcc_to_clang(flags: str) -> list[str]:
             'auto': '-finline-functions',
             'none': '-fno-inline-functions',
             'off': '-fno-inline-functions',
-            'deferred': '-finline-functions'
+            'on': '-finline-functions',
+            'deferred': '-finline-functions',
+            '_else_': '',
         },
         '-Cpp_exceptions': {
             'on': '-fcxx-exceptions',
@@ -113,7 +116,11 @@ def mwcc_to_clang(flags: str) -> list[str]:
             continue
 
         if flag in TWO_ARG_DICT:
-            out.append(TWO_ARG_DICT[flag][flags_split[i + 1]])
+            if flags_split[i + 1] in TWO_ARG_DICT[flag]:
+                second_arg = flags_split[i + 1]
+            else:
+                second_arg = "_else_"
+            out.append(TWO_ARG_DICT[flag][second_arg])
             i += 2
             continue
 

@@ -18,6 +18,7 @@ def parse_int_str(value: str | int) -> int:
 class SliceData:
     source: str
     memoryRanges: dict[str, str]
+    addRelocations: list[dict] = field(default_factory=list)
     compilerFlags: str = field(default='')
     nonMatching: bool = field(default=False)
 
@@ -28,13 +29,11 @@ class SliceSectionInfo:
     align: int
     size: int
     secAlign: int = field(default=-1)
-    offset: int = field(default=0)
     addr: int = field(default=0)
 
     def __post_init__(self):
         self.size = parse_int_str(self.size)
         self.addr = parse_int_str(self.addr)
-        self.offset = parse_int_str(self.offset)
 
 
 class SliceType(Enum):
@@ -64,15 +63,22 @@ class SliceSection:
     end_offs: int
     alignment: int
 
-    def contains(self, section: int, addend: int) -> bool:
-        return section == self.sec_idx and self.start_offs <= addend < self.end_offs
+@dataclass
+class Relocation:
+    location: int
+    symbol: int
+    offset: int
 
+    def __post_init__(self):
+        self.location = parse_int_str(self.location)
+        self.symbol = parse_int_str(self.symbol)
 
 @dataclass
 class Slice:
     sliceName: str
     source: str
     sliceSecs: list[SliceSection] = field(default_factory=list)
+    addRelocations: list[Relocation] = field(default_factory=list)
     ccFlags: str = field(default='')
     nonMatching: bool = field(default=False)
 
@@ -88,7 +94,6 @@ class SliceFile:
 
     def unit_name(self) -> str:
         return Path(self.meta.fileName).stem
-
 
 def make_filler_slice(slice_name: str, sec_range: dict[str, tuple[int, int]], slice_meta: SliceMeta) -> Optional[Slice]:
     slice_sections: list[SliceSection] = []
@@ -112,13 +117,16 @@ def load_slice_file(src: Path) -> SliceFile:
 
     # Initialize loop
     filler_slice_idx = 0
-    curr_sec_positions = {name: section.offset for name, section in slice_meta.sections.items() if section.size != 0}
+    curr_sec_positions = {name: section.addr for name, section in slice_meta.sections.items() if section.size != 0}
     for slice in slice_file.slices:
 
         # Create parsed slice
         filler_sec_range: dict[str, tuple] = {section: (0, 0) for section in curr_sec_positions}
         slice_name = str(Path(slice.source).with_suffix('.o'))
         parsed_slice = Slice(slice_name, slice.source, ccFlags=slice.compilerFlags, nonMatching=slice.nonMatching)
+
+        for reloc in slice.addRelocations:
+            parsed_slice.addRelocations.append(Relocation(**reloc))
 
         # Parse slice sections
         slice_sections = slice.memoryRanges
@@ -146,7 +154,7 @@ def load_slice_file(src: Path) -> SliceFile:
     # Add last slice which extends to the end of each section, if applicable
     filler_sec_range = {section: (0, 0) for section in curr_sec_positions}
     for name, offset in curr_sec_positions.items():
-        section_end = slice_meta.sections[name].size + slice_meta.sections[name].offset
+        section_end = slice_meta.sections[name].size + slice_meta.sections[name].addr
         filler_sec_range[name] = (offset, section_end)
 
     filler_slice = make_filler_slice(f'filler_{filler_slice_idx}.o', filler_sec_range, slice_meta)

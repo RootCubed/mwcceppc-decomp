@@ -68,9 +68,6 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
             addr_to_sym[virt_addr] = name
             used_names.add(name)
 
-    for target in base_relocations.values():
-        addr_to_sym.setdefault(target, f'__reloc_{target:08x}')
-
     sorted_sym_addrs = sorted(addr_to_sym.keys())
 
     actual_sec_idx = 0
@@ -128,7 +125,6 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
             name = addr_to_sym[target]
             coff_symbol = COFFSymbol()
             coff_symbol.name = name
-            coff_symbol.type = 0x20 if coff_sec.flags & 0x00000020 != 0 else 0x0 # 0x00000020 = IMAGE_SCN_CNT_CODE
             coff_symbol.storage_class = 0x2
 
             if not coff_symbol in coff_file.symbols:
@@ -145,7 +141,8 @@ def extract_slice(pe_file: PE, slice_file: SliceFile, slice: Slice, syms: dict[s
 
         for location, target in base_relocations.items():
             if sec.start_offs <= location < sec.end_offs:
-                add_relocation(location - sec.start_offs, 0, target, True)
+                symbol_addr = sorted_sym_addrs[bisect_left(sorted_sym_addrs, target + 1) - 1]
+                add_relocation(location - sec.start_offs, target - symbol_addr, symbol_addr, True)
 
         if not slice.sliceName.startswith('filler') and sec.sec_name == '.text':
             for insn in md.disasm(sec_data, sec.start_offs):

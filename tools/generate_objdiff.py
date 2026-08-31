@@ -39,7 +39,7 @@ for slice in slice_file.parsed_slices:
 
     if slice.sliceName.startswith('filler_'):
         unit['metadata']['auto_generated'] = True
-    else:
+    elif (SRCDIR / slice.source).exists():
         unit['metadata']['source_path'] = f'source/{slice.source}'
         unit['base_path'] = (BUILDDIR_COMPILED / stem / slice.sliceName).as_posix()
 

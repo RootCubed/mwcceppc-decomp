@@ -57,6 +57,12 @@ CW_WRAPPER = Path(TOOLDIR, 'mwcceppc_wrapper.py')
 SLICE_EXE = Path(TOOLDIR, 'slice_exe.py')
 FORMAT_SYMBOLS = Path(TOOLDIR, 'format_symbols.py')
 GEN_OBJDIFF = Path(TOOLDIR, 'generate_objdiff.py')
+RESTORE_PE = Path(TOOLDIR, 'restore_pe.py')
+PRINT_REPORT = Path(TOOLDIR, 'print_report.py')
+
+# Verification and progress report files
+CHECKSUM_FILE = Path(CONFIGDIR, 'mwcceppc.sha256')
+REPORT_FILE = Path(BUILDDIR, 'report.json')
 
 # Slices
 SLICE_FILE = Path(CONFIGDIR, 'mwcceppc.json')

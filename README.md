@@ -17,3 +17,7 @@ It currently targets mwcceppc for Wii 1.1.
 1. Run `configure.py` to set everything up.
 
 1. Run `ninja` to build the project. You should now be able to open the folder in objdiff.
+
+## Relinking
+
+The default build relinks the sliced COFF objects into `bin/mwcceppc.exe` and verifies it against the original. `mwld` cannot reproduce the original build timestamp or CodeView data, so `tools/restore_pe.py` copies those fields from `original/mwcceppc.exe` before comparison.

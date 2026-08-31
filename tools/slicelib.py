@@ -99,7 +99,8 @@ def make_filler_slice(slice_name: str, sec_range: dict[str, tuple[int, int]], sl
     slice_sections: list[SliceSection] = []
     for section_name, section in sec_range.items():
         start, end = section
-        if start == end:
+        # Empty contributions in the first object establish PE section order for mwld.
+        if start == end and slice_name != 'filler_0.o':
             continue
 
         section_info = slice_meta.sections[section_name]

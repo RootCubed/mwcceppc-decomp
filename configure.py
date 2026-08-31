@@ -31,11 +31,18 @@ def ld_o_files(slice_file: SliceFile) -> list[Path]:
 
 
 def sliced_o_files(slice_file: SliceFile) -> list[Path]:
-    files = []
-    for slice in slice_file.parsed_slices:
-        if not slice.source or slice.nonMatching:
-            files.append((BUILDDIR_SLICED / slice_file.unit_name() / slice.sliceName).with_suffix('.o'))
-    return files
+    return [
+        (BUILDDIR_SLICED / slice_file.unit_name() / slice.sliceName).with_suffix('.o')
+        for slice in slice_file.parsed_slices
+    ]
+
+
+def compiled_o_files(slice_file: SliceFile) -> list[Path]:
+    return [
+        (BUILDDIR_COMPILED / slice_file.unit_name() / slice.source).with_suffix('.o')
+        for slice in slice_file.parsed_slices
+        if slice.source and (SRCDIR / slice.source).exists()
+    ]
 
 
 def files_with_suffix(files: list[Path], suffix: str) -> list[Path]:
@@ -159,20 +166,21 @@ def gen_exe_build_statements(writer: NinjaWriter, slice_file: SliceFile):
                     sliced_o_files(slice_file),
                     ORIGDIR / slice_file.meta.fileName,
                     symbols=SYMBOL_FILE,
-                    implicit_inputs=[SYMBOL_FILE, slice_file.path],
+                    implicit_inputs=[SYMBOL_FILE, slice_file.path, SLICE_EXE, TOOLDIR / 'slicelib.py', TOOLDIR / 'coff.py'],
                     out_dir = BUILDDIR_SLICED)
 
     # Objdiff
     writer.build('gen_objdiff',
                     'objdiff.json',
                     files_with_suffix(sliced_o_files(slice_file), '.o'),
-                    implicit_inputs=files_with_suffix(sliced_o_files(slice_file), '.o'))
+                    implicit_inputs=[GEN_OBJDIFF, slice_file.path])
 
     # Linked EXE
     writer.build('link',
                     get_build_path(slice_file, '.exe'),
                     ld_o_files(slice_file),
-                    ldflags='')
+                    implicit_inputs=[ORIGDIR / slice_file.meta.fileName, RESTORE_PE],
+                    original=ORIGDIR / slice_file.meta.fileName)
 
 ######################
 # Build Script Setup #
@@ -200,13 +208,20 @@ writer.rule('slice_exe',
             description='Slice $in')
 
 writer.rule('link',
-            command='$python -c "exit(0)"', # Skip for now
-            # command='$ld $ldflags $in -o $out',
+            command='$ld -nostdlib -nodefaultlibs -main _mainCRTStartup -subsystem console '
+                    '-filealign 512 -sectionalign 4096 $in -o $out '
+                    f'&& $python {RESTORE_PE} $original $out',
             description='Link $out')
 
 writer.rule('gen_objdiff',
             command=f'$python {GEN_OBJDIFF}',
             description='Generate objdiff')
+
+writer.rule('report',
+            command=f'objdiff-cli report generate -o {REPORT_FILE} '
+                    f'&& $python {PRINT_REPORT} {REPORT_FILE}'
+                    f'&& sha256sum -c {CHECKSUM_FILE} ',
+            description='Verify and report progress')
 
 writer.rule('configure',
             command=f'$python {sys.argv[0]}',
@@ -223,13 +238,20 @@ gen_compile_commands(slice)
 gen_compile_build_statements(writer, slice)
 gen_exe_build_statements(writer, slice)
 
+# This output is intentionally never created, so argument-free Ninja runs always report status.
+writer.build('report',
+             'report',
+             [BUILDDIR / slice.meta.fileName, 'objdiff.json', *compiled_o_files(slice)],
+             implicit_inputs=[CHECKSUM_FILE, PRINT_REPORT])
+
 # Regenerate build.ninja on changes to the slices
 writer.build('configure',
              NINJA_BUILD_FILE,
-             slice.path)
+             slice.path,
+             implicit_inputs=[Path(sys.argv[0]), TOOLDIR / 'project_settings.py', TOOLDIR / 'slicelib.py'])
 
-# Default targets (final EXE)
-writer.default([BUILDDIR / slice.meta.fileName, 'objdiff.json'])
+# Default targets (final EXE checksum)
+writer.default('report')
 
 # Flush the created file
 writer.flush(NINJA_BUILD_FILE)

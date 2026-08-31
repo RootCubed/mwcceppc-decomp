@@ -6,15 +6,15 @@
         "moduleNum": 0,
         "baseAddr": "00400000",
         "sections": {
-            ".text":  { "index": 0, "align": 16, "size": "0x272000", "addr": "0x401000" },
-            ".exc":   { "index": 1, "align": 4, "size": "0x200", "addr": "0x673000" },
-            ".rdata": { "index": 2, "align": 8, "size": "0x16200", "addr": "0x674000" },
-            ".data":  { "index": 3, "align": 8, "size": "0x7da00", "addr": "0x68b000" },
-            ".rsc":   { "index": 4, "align": 8, "size": "0x12a00", "addr": "0x709000" },
-            ".CRT":   { "index": 5, "align": 4, "size": "0x200", "addr": "0x71c000" },
-            ".idata": { "index": 6, "align": 4, "size": "0xc00", "addr": "0x71d000" },
+            ".text":  { "index": 0, "align": 16, "size": "0x271f4a", "addr": "0x401000" },
+            ".exc":   { "index": 1, "align": 4, "size": "0x1e4", "addr": "0x673000" },
+            ".rdata": { "index": 2, "align": 8, "size": "0x160f4", "addr": "0x674000" },
+            ".data":  { "index": 3, "align": 8, "size": "0x7d8cc", "addr": "0x68b000" },
+            ".rsrc":  { "index": 4, "align": 8, "size": "0x128c0", "addr": "0x709000" },
+            ".CRT":   { "index": 5, "align": 4, "size": "0x14", "addr": "0x71c000" },
+            ".idata": { "index": 6, "align": 4, "size": "0xad0", "addr": "0x71d000" },
             ".bss":   { "index": 7, "align": 4, "size": "0x794e5", "addr": "0x71e000" },
-            ".reloc": { "index": 8, "align": 4, "size": "0x32e00", "addr": "0x798000" }
+            ".reloc": { "index": 8, "align": 4, "size": "0x32cd0", "addr": "0x798000" }
         }
     },
     "slices": [
